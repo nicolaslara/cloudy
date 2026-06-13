@@ -1,13 +1,13 @@
 # cloudy — repo-level task runner. Each target delegates into backend/ (uv)
 # or frontend/ (pnpm). POSIX make; no GNU-only features.
 
-.PHONY: dev dev-backend dev-frontend db test lint typecheck create-db fmt check-length
+.PHONY: dev dev-backend dev-frontend db test lint typecheck migrate create-db fmt check-length
 
 dev:
 	@echo "Run in two terminals:"
 	@echo "  make dev-backend   # FastAPI with reload (http://localhost:8400)"
 	@echo "  make dev-frontend  # Vite dev server with /api proxy (http://localhost:5273/app/)"
-	@echo "First time: make db && make create-db"
+	@echo "First time: make db && make migrate"
 
 dev-backend:
 	cd backend && uv run cloudy serve --reload
@@ -18,8 +18,10 @@ dev-frontend:
 db:
 	docker compose up -d postgres
 
-create-db:
-	cd backend && uv run cloudy create-db
+migrate:
+	cd backend && uv run cloudy migrate
+
+create-db: migrate
 
 test:
 	cd backend && uv run pytest

@@ -1,49 +1,34 @@
 :root {
-  font-family: system-ui, sans-serif;
-  color: #1f2933;
-  background: #f8fafc;
+  --paper: #f7f4ee;
+  --ink: #202326;
+  --muted: #5b6166;
+  --line: #d9d2c4;
+  --panel: #fffdf8;
+  --hover: #ebe0ca;
+  --cyan: #00818a;
+  color: var(--ink);
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
 }
-
 body {
   margin: 0;
+  background: linear-gradient(90deg, rgba(32,35,38,.035) 1px, transparent 1px) 0 0 / 28px 28px, linear-gradient(rgba(32,35,38,.025) 1px, transparent 1px) 0 0 / 28px 28px, var(--paper);
 }
-
-.page {
-  max-width: 40rem;
-  margin: 4rem auto;
-  padding: 0 1rem;
-}
-
-h1 {
-  margin-bottom: 0.25rem;
-}
-
-.tagline {
-  margin-top: 0;
-  color: #52606d;
-}
-
-.card {
-  margin-top: 2rem;
-  padding: 1rem 1.25rem;
-  border: 1px solid #d3dce6;
-  border-radius: 8px;
-  background: #fff;
-}
-
-.card h2 {
-  margin: 0 0 0.5rem;
-  font-size: 1rem;
-}
-
-.card-ok {
-  border-color: #2f9e44;
-}
-
-.card-degraded {
-  border-color: #e8930c;
-}
-
-.card-unreachable {
-  border-color: #d6336c;
-}
+h1, h2 { font-family: ui-sans-serif, system-ui, sans-serif; font-weight: 800; letter-spacing: -0.01em; }
+button, input { font-family: ui-sans-serif, system-ui, sans-serif; }
+.app { min-height: 100vh; display: flex; flex-direction: column; }
+.app-header { padding: 1.25rem 1.25rem .75rem; border-bottom: 1px solid var(--line); background: var(--panel); }
+.app-brand h1 { margin: 0 0 .15rem; }
+.tagline, .muted { color: var(--muted); }
+.tagline { margin: 0; }
+.app-search { max-width: 44rem; margin-top: .75rem; }
+.location-filter { margin-top: .75rem; }
+.location-filter h2 { margin: 0 0 .15rem; font-size: 1.05rem; }
+.workspace-main { padding: 1rem 1.25rem 1.5rem; max-width: 44rem; }
+.search { max-width: 44rem; }
+.search input { width: 100%; padding: .65rem .9rem; font-size: 1rem; border: 1px solid var(--line); border-radius: 8px; box-sizing: border-box; background: #fff; }
+.search input:focus { outline: 2px solid var(--cyan); outline-offset: 1px; }
+.suggestions { list-style: none; margin: .25rem 0 0; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); overflow: hidden; box-shadow: 0 8px 24px rgba(35,31,24,.08); }
+.suggestions li { margin: 0; }
+.suggestions button { display: block; width: 100%; padding: .55rem .9rem; border: none; background: transparent; text-align: left; cursor: pointer; color: var(--ink); font-size: .95rem; }
+.suggestions button:hover, .suggestions button.highlighted { background: var(--hover); }
+.search-note { margin: .35rem 0 0; color: var(--muted); font-size: .92rem; }

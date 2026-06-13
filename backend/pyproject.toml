@@ -10,6 +10,8 @@ dependencies = [
     "pydantic-settings>=2.14,<3",
     "sqlmodel>=0.0.27",
     "psycopg[binary]>=3.2,<4",
+    "httpx>=0.28",
+    "alembic>=1.14,<2",
 ]
 
 [project.scripts]
@@ -20,7 +22,7 @@ dev = [
     "ruff>=0.14",
     "mypy>=1.15",
     "pytest>=8",
-    "httpx>=0.28",  # fastapi.testclient transport
+    "pytest-cov>=7.1.0",
 ]
 
 [build-system]

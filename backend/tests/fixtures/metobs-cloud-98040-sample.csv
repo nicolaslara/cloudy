@@ -1,0 +1,17 @@
+Stationsnamn;Stationsnummer;Stationsnät;Mäthöjd (meter över marken)
+Berga;98040;SMHIs stationsnät;0.0
+
+Parameternamn;Beskrivning;Enhet
+Total molnmängd;momentanvärde, 1 gång/tim;procent
+
+Datum;Tid (UTC);Total molnmängd;Kvalitet
+2018-07-01;00:00:00;0;G
+2018-07-01;01:00:00;0;G
+2018-07-01;02:00:00;0;G
+2018-07-01;03:00:00;113;G
+2018-07-01;04:00:00;50;G
+2018-07-01;05:00:00;75;G
+2018-07-01;06:00:00;100;G
+2018-07-02;00:00:00;25;G
+2018-07-02;12:00:00;9999;G
+2018-08-15;06:00:00;88;Y

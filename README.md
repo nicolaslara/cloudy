@@ -6,32 +6,36 @@ from SMHI historical open data.
 
 ## Status
 
-**Bootstrap (2026-06-14).** The local stack runs: Postgres via Docker, FastAPI
-health check, and a React app under `/app/` that confirms the API is reachable.
-Ingestion, charts, Normals, predictions, deploy, and the presentation are later
-milestones.
+**Ingestion (2026-06-13).** Postgres schema, SMHI ingest CLI, address geocoding,
+and nearest cloud-station lookup work locally. Historical charts arrive in the
+next milestone. The app lives at `/app/`; the root presentation page is separate.
 
 ## Try it
 
 Prereqs: Docker, [uv](https://docs.astral.sh/uv/), Node 24 + pnpm (via corepack).
 
 ```sh
-cp backend/.env.example backend/.env   # optional — defaults match compose
-make db && make create-db
+cp backend/.env.example backend/.env
+make db && make migrate
 make dev-backend    # http://localhost:8400
 make dev-frontend   # second terminal — http://localhost:5273/app/
 ```
 
+Search for a Swedish address — the header shows the resolved location and the
+nearest cloud station.
+
 Health check: `curl http://localhost:8400/api/v1/health`
 
+### Ingest SMHI data
+
+From `backend/` (`uv run cloudy ingest …`). Jobs are idempotent; raw downloads
+land under gitignored `data/raw/`.
+
+```sh
+cd backend
+uv run cloudy ingest stations
+uv run cloudy ingest lightning --from 2018-07-01 --to 2018-07-31
+uv run cloudy ingest cloud --station 98040
+```
+
 Also: `make test`, `make lint`, `make typecheck`.
-
-## Repo layout
-
-| Path | Role |
-| --- | --- |
-| `project.md` | Product vision, design stances, phased roadmap |
-| `backend/` | FastAPI app, SQLModel, CLI (`uv run cloudy …`) |
-| `frontend/app/` | Vite HTML entry for the React app at `/app/` |
-| `frontend/src/` | React app source |
-| `docker-compose.yml` | Local Postgres 18 |

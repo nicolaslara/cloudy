@@ -1,0 +1,378 @@
+{
+ "station": [
+  {
+   "key": "188790",
+   "updated": 1781175600000,
+   "title": "Total molnm\u00e4ngd - Abisko Aut",
+   "summary": "Latitud: 68.3538 Longitud: 18.8164 H\u00f6jd: 392.235",
+   "link": [
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/188790.json",
+     "rel": "station",
+     "type": "application/json"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/188790.xml",
+     "rel": "station",
+     "type": "application/xml"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/188790.atom",
+     "rel": "station",
+     "type": "application/atom+xml"
+    }
+   ],
+   "name": "Abisko Aut",
+   "owner": "Polarforskningssekretariatet",
+   "ownerCategory": "CLIMATE",
+   "measuringStations": "CORE",
+   "id": 188790,
+   "height": 392.235,
+   "latitude": 68.3538,
+   "longitude": 18.8164,
+   "active": true,
+   "from": 536457600000,
+   "to": 1781175600000
+  },
+  {
+   "key": "167710",
+   "updated": 1781175600000,
+   "title": "Total molnm\u00e4ngd - Arjeplog A",
+   "summary": "Latitud: 66.0513 Longitud: 17.8396 H\u00f6jd: 430.839",
+   "link": [
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/167710.json",
+     "rel": "station",
+     "type": "application/json"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/167710.xml",
+     "rel": "station",
+     "type": "application/xml"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/167710.atom",
+     "rel": "station",
+     "type": "application/atom+xml"
+    }
+   ],
+   "name": "Arjeplog A",
+   "owner": "SMHI",
+   "ownerCategory": "CLIMATE",
+   "measuringStations": "CORE",
+   "id": 167710,
+   "height": 430.839,
+   "latitude": 66.0513,
+   "longitude": 17.8396,
+   "active": true,
+   "from": -662688000000,
+   "to": 1781175600000
+  },
+  {
+   "key": "159880",
+   "updated": 1781175600000,
+   "title": "Total molnm\u00e4ngd - Arvidsjaur A",
+   "summary": "Latitud: 65.5941 Longitud: 19.2642 H\u00f6jd: 382.45",
+   "link": [
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/159880.json",
+     "rel": "station",
+     "type": "application/json"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/159880.xml",
+     "rel": "station",
+     "type": "application/xml"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/159880.atom",
+     "rel": "station",
+     "type": "application/atom+xml"
+    }
+   ],
+   "name": "Arvidsjaur A",
+   "owner": "SMHI",
+   "ownerCategory": "CLIMATE",
+   "measuringStations": "CORE",
+   "id": 159880,
+   "height": 382.45,
+   "latitude": 65.5941,
+   "longitude": 19.2642,
+   "active": true,
+   "from": 1099267200000,
+   "to": 1781175600000
+  },
+  {
+   "key": "92410",
+   "updated": 1781175600000,
+   "title": "Total molnm\u00e4ngd - Arvika A",
+   "summary": "Latitud: 59.6743 Longitud: 12.6354 H\u00f6jd: 65.758",
+   "link": [
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/92410.json",
+     "rel": "station",
+     "type": "application/json"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/92410.xml",
+     "rel": "station",
+     "type": "application/xml"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/92410.atom",
+     "rel": "station",
+     "type": "application/atom+xml"
+    }
+   ],
+   "name": "Arvika A",
+   "owner": "SMHI",
+   "ownerCategory": "CLIMATE",
+   "measuringStations": "CORE",
+   "id": 92410,
+   "height": 65.758,
+   "latitude": 59.6743,
+   "longitude": 12.6354,
+   "active": true,
+   "from": 828316800000,
+   "to": 1781175600000
+  },
+  {
+   "key": "84340",
+   "updated": 1781175600000,
+   "title": "Total molnm\u00e4ngd - Axst\u00e5l",
+   "summary": "Latitud: 58.5710 Longitud: 14.5570 H\u00f6jd: 88.5",
+   "link": [
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/84340.json",
+     "rel": "station",
+     "type": "application/json"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/84340.xml",
+     "rel": "station",
+     "type": "application/xml"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/84340.atom",
+     "rel": "station",
+     "type": "application/atom+xml"
+    }
+   ],
+   "name": "Axst\u00e5l",
+   "owner": "F\u00f6rsvarsmakten",
+   "ownerCategory": "CLIMATE",
+   "measuringStations": "CORE",
+   "id": 84340,
+   "height": 88.5,
+   "latitude": 58.571,
+   "longitude": 14.557,
+   "active": true,
+   "from": 1280620800000,
+   "to": 1781175600000
+  },
+  {
+   "key": "98040",
+   "updated": 1781175600000,
+   "title": "Total molnm\u00e4ngd - Berga",
+   "summary": "Latitud: 59.0680 Longitud: 18.1150 H\u00f6jd: 4.3",
+   "link": [
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/98040.json",
+     "rel": "station",
+     "type": "application/json"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/98040.xml",
+     "rel": "station",
+     "type": "application/xml"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/98040.atom",
+     "rel": "station",
+     "type": "application/atom+xml"
+    }
+   ],
+   "name": "Berga",
+   "owner": "F\u00f6rsvarsmakten",
+   "ownerCategory": "CLIMATE",
+   "measuringStations": "CORE",
+   "id": 98040,
+   "height": 4.3,
+   "latitude": 59.068,
+   "longitude": 18.115,
+   "active": true,
+   "from": -541728000000,
+   "to": 1781175600000
+  },
+  {
+   "key": "151280",
+   "updated": 1781175600000,
+   "title": "Total molnm\u00e4ngd - Bjur\u00f6klubb A",
+   "summary": "Latitud: 64.4799 Longitud: 21.5754 H\u00f6jd: 35.41",
+   "link": [
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/151280.json",
+     "rel": "station",
+     "type": "application/json"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/151280.xml",
+     "rel": "station",
+     "type": "application/xml"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/151280.atom",
+     "rel": "station",
+     "type": "application/atom+xml"
+    }
+   ],
+   "name": "Bjur\u00f6klubb A",
+   "owner": "SMHI",
+   "ownerCategory": "CLIMATE",
+   "measuringStations": "CORE",
+   "id": 151280,
+   "height": 35.41,
+   "latitude": 64.4799,
+   "longitude": 21.5754,
+   "active": true,
+   "from": 828316800000,
+   "to": 1781175600000
+  },
+  {
+   "key": "92130",
+   "updated": 1781175600000,
+   "title": "Total molnm\u00e4ngd - Blomskog A",
+   "summary": "Latitud: 59.2213 Longitud: 12.0754 H\u00f6jd: 169.645",
+   "link": [
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/92130.json",
+     "rel": "station",
+     "type": "application/json"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/92130.xml",
+     "rel": "station",
+     "type": "application/xml"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/92130.atom",
+     "rel": "station",
+     "type": "application/atom+xml"
+    }
+   ],
+   "name": "Blomskog A",
+   "owner": "SMHI",
+   "ownerCategory": "CLIMATE",
+   "measuringStations": "CORE",
+   "id": 92130,
+   "height": 169.645,
+   "latitude": 59.2213,
+   "longitude": 12.0754,
+   "active": true,
+   "from": 1083369600000,
+   "to": 1781175600000
+  },
+  {
+   "key": "154860",
+   "updated": 562723199000,
+   "title": "Total molnm\u00e4ngd - Abelvattnet Aut",
+   "summary": "Latitud: 65.5300 Longitud: 14.9700 H\u00f6jd: 665.0",
+   "link": [
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/154860.json",
+     "rel": "station",
+     "type": "application/json"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/154860.xml",
+     "rel": "station",
+     "type": "application/xml"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/154860.atom",
+     "rel": "station",
+     "type": "application/atom+xml"
+    }
+   ],
+   "name": "Abelvattnet Aut",
+   "owner": "SMHI",
+   "ownerCategory": "CLIMATE",
+   "measuringStations": "CORE",
+   "id": 154860,
+   "height": 665.0,
+   "latitude": 65.53,
+   "longitude": 14.97,
+   "active": false,
+   "from": 441763200000,
+   "to": 562723199000
+  },
+  {
+   "key": "158990",
+   "updated": 823068000000,
+   "title": "Total molnm\u00e4ngd - Abraur",
+   "summary": "Latitud: 65.9857 Longitud: 18.9195 H\u00f6jd: 368.079",
+   "link": [
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/158990.json",
+     "rel": "station",
+     "type": "application/json"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/158990.xml",
+     "rel": "station",
+     "type": "application/xml"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/158990.atom",
+     "rel": "station",
+     "type": "application/atom+xml"
+    }
+   ],
+   "name": "Abraur",
+   "owner": "SMHI",
+   "ownerCategory": "CLIMATE",
+   "measuringStations": "CORE",
+   "id": 158990,
+   "height": 368.079,
+   "latitude": 65.9857,
+   "longitude": 18.9195,
+   "active": false,
+   "from": 678326400000,
+   "to": 823068000000
+  },
+  {
+   "key": "117330",
+   "updated": 120959999000,
+   "title": "Total molnm\u00e4ngd - Ag\u00f6",
+   "summary": "Latitud: 61.5500 Longitud: 17.4666 H\u00f6jd: 20.0",
+   "link": [
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/117330.json",
+     "rel": "station",
+     "type": "application/json"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/117330.xml",
+     "rel": "station",
+     "type": "application/xml"
+    },
+    {
+     "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station/117330.atom",
+     "rel": "station",
+     "type": "application/atom+xml"
+    }
+   ],
+   "name": "Ag\u00f6",
+   "owner": "SMHI",
+   "ownerCategory": "CLIMATE",
+   "measuringStations": "CORE",
+   "id": 117330,
+   "height": 20.0,
+   "latitude": 61.55,
+   "longitude": 17.4666,
+   "active": false,
+   "from": -915148800000,
+   "to": 120959999000
+  }
+ ]
+}
