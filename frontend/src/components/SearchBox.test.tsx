@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { SearchBox } from "./SearchBox";
@@ -21,10 +21,7 @@ function renderBox(onSelect = vi.fn()) {
   return onSelect;
 }
 
-afterEach(() => {
-  cleanup();
-  vi.restoreAllMocks();
-});
+afterEach(() => vi.restoreAllMocks());
 
 function mockGeocode() {
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {

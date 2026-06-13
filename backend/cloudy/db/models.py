@@ -53,6 +53,36 @@ class LightningEvent(SQLModel, table=True):
     source_version: str = Field(default="1.0", max_length=16)
 
 
+class LightningDailyRollup(SQLModel, table=True):
+    """Sweden-wide daily lightning summaries for low-latency default charts."""
+
+    __tablename__ = "lightning_daily_rollups"
+    __table_args__ = (
+        Index("ix_lightning_daily_rollups_day", "day"),
+        UniqueConstraint(
+            "source",
+            "source_version",
+            "day",
+            name="uq_lightning_daily_rollup_source_day",
+        ),
+    )
+
+    id: int | None = Field(default=None, primary_key=True)
+    day: date
+    bucket_start: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
+    bucket_end: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
+    cg_count: int
+    all_count: int
+    lightning_days: int
+    max_abs_peak_ka: float | None = None
+    strongest_event_time: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True)),
+    )
+    source: str = Field(default="smhi-lightning", max_length=32)
+    source_version: str = Field(default="1.0", max_length=16)
+
+
 class Station(SQLModel, table=True):
     """SMHI metobs station measuring total cloud amount (parameter 16)."""
 
@@ -87,5 +117,44 @@ class CloudHourly(SQLModel, table=True):
     ts_utc: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
     cloud_pct: float | None = None  # normalized 0-100; NULL = missing / not observable
     quality: str | None = Field(default=None, max_length=1)  # G or Y; kept, never filtered
+    source: str = Field(default="smhi-metobs", max_length=32)
+    source_version: str = Field(default="1.0", max_length=16)
+
+
+class CloudRollup(SQLModel, table=True):
+    """Station cloud summaries at serving resolutions, refreshed from cloud_hourly."""
+
+    __tablename__ = "cloud_rollups"
+    __table_args__ = (
+        Index(
+            "ix_cloud_rollups_station_resolution_start",
+            "station_id",
+            "resolution",
+            "bucket_start",
+        ),
+        UniqueConstraint(
+            "station_id",
+            "source",
+            "source_version",
+            "resolution",
+            "bucket_start",
+            name="uq_cloud_rollup_station_resolution_start",
+        ),
+    )
+
+    id: int | None = Field(default=None, primary_key=True)
+    station_id: int = Field(foreign_key="stations.id", index=True)
+    resolution: str = Field(max_length=8, index=True)
+    bucket_start: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
+    bucket_end: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
+    observed_count: int
+    expected_count: int
+    missing_count: int
+    mean_cloud_pct: float | None = None
+    min_cloud_pct: float | None = None
+    max_cloud_pct: float | None = None
+    p05_cloud_pct: float | None = None
+    p50_cloud_pct: float | None = None
+    p95_cloud_pct: float | None = None
     source: str = Field(default="smhi-metobs", max_length=32)
     source_version: str = Field(default="1.0", max_length=16)

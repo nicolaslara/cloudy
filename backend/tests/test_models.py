@@ -1,19 +1,13 @@
-import os
 from datetime import UTC, datetime
 
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlalchemy import Engine
+from sqlmodel import Session, select
 
 from cloudy.db.models import IngestRun
 
 
-def test_ingest_run_round_trip() -> None:
-    # Locked testing story: pytest runs against the compose Postgres when
-    # DATABASE_URL is set (CI exports it); falls back to in-memory SQLite so
-    # the test still runs without Docker locally.
-    engine = create_engine(os.environ.get("DATABASE_URL", "sqlite://"))
-    SQLModel.metadata.drop_all(engine)
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
+def test_ingest_run_round_trip(db: Engine) -> None:
+    with Session(db) as session:
         session.add(
             IngestRun(
                 source="smhi-lightning",

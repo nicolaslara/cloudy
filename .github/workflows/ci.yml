@@ -22,6 +22,7 @@ jobs:
       - uses: dorny/paths-filter@v3
         id: filter
         with:
+          base: main  # explicit so the job also runs under act (no default_branch in its event)
           filters: |
             backend:
               - 'backend/**'
@@ -41,6 +42,10 @@ jobs:
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
+    # Container job so the postgres service is reached by hostname — identical
+    # behavior on GitHub and under local `act` (no host port binding at all).
+    # node image: JS actions need node in the container; git for checkout.
+    container: node:24-bookworm
     defaults:
       run:
         working-directory: backend
@@ -51,15 +56,14 @@ jobs:
           POSTGRES_DB: cloudy
           POSTGRES_USER: cloudy
           POSTGRES_PASSWORD: cloudy
-        ports:
-          - 5432:5432
         options: >-
           --health-cmd "pg_isready -U cloudy -d cloudy"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
     env:
-      DATABASE_URL: postgresql+psycopg://cloudy:cloudy@localhost:5432/cloudy
+      DATABASE_URL: postgresql+psycopg://cloudy:cloudy@postgres:5432/cloudy  # migrate smoke
+      TEST_PG_SERVER: postgresql+psycopg://cloudy:cloudy@postgres:5432/cloudy  # conftest test DBs
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v7

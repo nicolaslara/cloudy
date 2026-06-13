@@ -1,0 +1,1360 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "cloudy",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/geocode": {
+      "get": {
+        "summary": "Geocode",
+        "operationId": "geocode_api_v1_geocode_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 200,
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GeocodeCandidate"
+                  },
+                  "title": "Response Geocode Api V1 Geocode Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lightning": {
+      "get": {
+        "summary": "Lightning Route",
+        "operationId": "lightning_route_api_v1_lightning_get",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "default": "2015-01-01",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "maximum": 70.0,
+                  "minimum": 54.0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "maximum": 26.0,
+                  "minimum": 9.0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lon"
+            }
+          },
+          {
+            "name": "radius_km",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Radius Km"
+            }
+          },
+          {
+            "name": "bbox",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Bbox"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "series",
+                "strokes"
+              ],
+              "type": "string",
+              "default": "series",
+              "title": "Format"
+            }
+          },
+          {
+            "name": "aggregation",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "auto",
+                "raw",
+                "hour",
+                "6h",
+                "day",
+                "week",
+                "month",
+                "year"
+              ],
+              "type": "string",
+              "default": "auto",
+              "title": "Aggregation"
+            }
+          },
+          {
+            "name": "width_px",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 10000,
+                  "minimum": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Width Px"
+            }
+          },
+          {
+            "name": "max_points",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 3000,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max Points"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50000,
+              "minimum": 1,
+              "default": 25000,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/LightningSeriesResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/LightningStrokesResponse"
+                    }
+                  ],
+                  "title": "Response Lightning Route Api V1 Lightning Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cloud": {
+      "get": {
+        "summary": "Cloud Route",
+        "operationId": "cloud_route_api_v1_cloud_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "maximum": 70.0,
+                  "minimum": 54.0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "maximum": 26.0,
+                  "minimum": 9.0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lon"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "default": "2015-01-01",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "aggregation",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "auto",
+                "raw",
+                "hour",
+                "6h",
+                "day",
+                "week",
+                "month",
+                "year"
+              ],
+              "type": "string",
+              "default": "auto",
+              "title": "Aggregation"
+            }
+          },
+          {
+            "name": "width_px",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 10000,
+                  "minimum": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Width Px"
+            }
+          },
+          {
+            "name": "max_points",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 3000,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max Points"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloudSeriesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/station": {
+      "get": {
+        "summary": "Station",
+        "operationId": "station_api_v1_station_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 70.0,
+              "minimum": 54.0,
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 26.0,
+              "minimum": 9.0,
+              "title": "Lon"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CloudPeriod": {
+        "properties": {
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "bucket_start": {
+            "type": "string",
+            "title": "Bucket Start"
+          },
+          "bucket_end": {
+            "type": "string",
+            "title": "Bucket End"
+          },
+          "mean_cloud_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Cloud Pct"
+          },
+          "min_cloud_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Cloud Pct"
+          },
+          "max_cloud_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Cloud Pct"
+          },
+          "p05_cloud_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P05 Cloud Pct"
+          },
+          "p50_cloud_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P50 Cloud Pct"
+          },
+          "p95_cloud_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P95 Cloud Pct"
+          },
+          "observed_count": {
+            "type": "integer",
+            "title": "Observed Count"
+          },
+          "expected_count": {
+            "type": "integer",
+            "title": "Expected Count"
+          },
+          "missing_count": {
+            "type": "integer",
+            "title": "Missing Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period",
+          "bucket_start",
+          "bucket_end",
+          "mean_cloud_pct",
+          "min_cloud_pct",
+          "max_cloud_pct",
+          "p05_cloud_pct",
+          "p50_cloud_pct",
+          "p95_cloud_pct",
+          "observed_count",
+          "expected_count",
+          "missing_count"
+        ],
+        "title": "CloudPeriod"
+      },
+      "CloudResponseMeta": {
+        "properties": {
+          "from": {
+            "type": "string",
+            "title": "From"
+          },
+          "to": {
+            "type": "string",
+            "title": "To"
+          },
+          "coverage_fraction": {
+            "type": "number",
+            "title": "Coverage Fraction"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "station_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Station Count"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "attribution": {
+            "type": "string",
+            "title": "Attribution"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "total_matched": {
+            "type": "integer",
+            "title": "Total Matched"
+          },
+          "returned": {
+            "type": "integer",
+            "title": "Returned"
+          },
+          "requested_aggregation": {
+            "type": "string",
+            "title": "Requested Aggregation"
+          },
+          "resolved_resolution": {
+            "type": "string",
+            "title": "Resolved Resolution"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          },
+          "representation": {
+            "type": "string",
+            "title": "Representation"
+          },
+          "target_points": {
+            "type": "integer",
+            "title": "Target Points"
+          },
+          "point_count": {
+            "type": "integer",
+            "title": "Point Count"
+          },
+          "is_complete": {
+            "type": "boolean",
+            "title": "Is Complete"
+          }
+        },
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "coverage_fraction",
+          "scope",
+          "station_count",
+          "sources",
+          "attribution",
+          "generated_at",
+          "total_matched",
+          "returned",
+          "requested_aggregation",
+          "resolved_resolution",
+          "mode",
+          "representation",
+          "target_points",
+          "point_count",
+          "is_complete"
+        ],
+        "title": "CloudResponseMeta"
+      },
+      "CloudSeriesResponse": {
+        "properties": {
+          "aggregation": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "raw",
+              "hour",
+              "6h",
+              "day",
+              "week",
+              "month",
+              "year"
+            ],
+            "title": "Aggregation"
+          },
+          "resolved_resolution": {
+            "type": "string",
+            "enum": [
+              "raw",
+              "hour",
+              "6h",
+              "day",
+              "week",
+              "month",
+              "year"
+            ],
+            "title": "Resolved Resolution"
+          },
+          "station": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CloudStationMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/CloudPeriod"
+            },
+            "type": "array",
+            "title": "Series"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CloudResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "aggregation",
+          "resolved_resolution",
+          "station",
+          "series",
+          "meta"
+        ],
+        "title": "CloudSeriesResponse"
+      },
+      "CloudStationMeta": {
+        "properties": {
+          "station_id": {
+            "type": "integer",
+            "title": "Station Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "distance_km": {
+            "type": "number",
+            "title": "Distance Km"
+          }
+        },
+        "type": "object",
+        "required": [
+          "station_id",
+          "name",
+          "distance_km"
+        ],
+        "title": "CloudStationMeta"
+      },
+      "GeocodeCandidate": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "title": "Lon"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "lat",
+          "lon",
+          "provider"
+        ],
+        "title": "GeocodeCandidate"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status"
+          },
+          "db": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down"
+            ],
+            "title": "Db"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "db",
+          "version"
+        ],
+        "title": "HealthResponse"
+      },
+      "LightningPeriod": {
+        "properties": {
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "bucket_start": {
+            "type": "string",
+            "title": "Bucket Start"
+          },
+          "bucket_end": {
+            "type": "string",
+            "title": "Bucket End"
+          },
+          "cg_count": {
+            "type": "integer",
+            "title": "Cg Count"
+          },
+          "all_count": {
+            "type": "integer",
+            "title": "All Count"
+          },
+          "lightning_days": {
+            "type": "integer",
+            "title": "Lightning Days"
+          },
+          "max_abs_peak_ka": {
+            "type": "number",
+            "title": "Max Abs Peak Ka"
+          },
+          "strongest_event_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strongest Event Time"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period",
+          "bucket_start",
+          "bucket_end",
+          "cg_count",
+          "all_count",
+          "lightning_days",
+          "max_abs_peak_ka",
+          "strongest_event_time"
+        ],
+        "title": "LightningPeriod"
+      },
+      "LightningSeriesResponse": {
+        "properties": {
+          "format": {
+            "type": "string",
+            "const": "series",
+            "title": "Format"
+          },
+          "aggregation": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "raw",
+              "hour",
+              "6h",
+              "day",
+              "week",
+              "month",
+              "year"
+            ],
+            "title": "Aggregation"
+          },
+          "resolved_resolution": {
+            "type": "string",
+            "enum": [
+              "raw",
+              "hour",
+              "6h",
+              "day",
+              "week",
+              "month",
+              "year"
+            ],
+            "title": "Resolved Resolution"
+          },
+          "spatial": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SpatialMetaSweden"
+              },
+              {
+                "$ref": "#/components/schemas/SpatialMetaBbox"
+              },
+              {
+                "$ref": "#/components/schemas/SpatialMetaRadius"
+              }
+            ],
+            "title": "Spatial"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/LightningPeriod"
+            },
+            "type": "array",
+            "title": "Series"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/SeriesResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "format",
+          "aggregation",
+          "resolved_resolution",
+          "spatial",
+          "series",
+          "meta"
+        ],
+        "title": "LightningSeriesResponse"
+      },
+      "LightningStrokesResponse": {
+        "properties": {
+          "format": {
+            "type": "string",
+            "const": "strokes",
+            "title": "Format"
+          },
+          "columns": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "lon",
+                "lat",
+                "peak_ka",
+                "cg",
+                "ts"
+              ]
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "rows": {
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "spatial": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SpatialMetaSweden"
+              },
+              {
+                "$ref": "#/components/schemas/SpatialMetaBbox"
+              },
+              {
+                "$ref": "#/components/schemas/SpatialMetaRadius"
+              }
+            ],
+            "title": "Spatial"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/StrokesResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "format",
+          "columns",
+          "rows",
+          "spatial",
+          "meta"
+        ],
+        "title": "LightningStrokesResponse"
+      },
+      "SeriesResponseMeta": {
+        "properties": {
+          "from": {
+            "type": "string",
+            "title": "From"
+          },
+          "to": {
+            "type": "string",
+            "title": "To"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "attribution": {
+            "type": "string",
+            "title": "Attribution"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "total_matched": {
+            "type": "integer",
+            "title": "Total Matched"
+          },
+          "returned": {
+            "type": "integer",
+            "title": "Returned"
+          },
+          "requested_aggregation": {
+            "type": "string",
+            "title": "Requested Aggregation"
+          },
+          "resolved_resolution": {
+            "type": "string",
+            "title": "Resolved Resolution"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          },
+          "representation": {
+            "type": "string",
+            "title": "Representation"
+          },
+          "target_points": {
+            "type": "integer",
+            "title": "Target Points"
+          },
+          "point_count": {
+            "type": "integer",
+            "title": "Point Count"
+          },
+          "is_complete": {
+            "type": "boolean",
+            "title": "Is Complete"
+          }
+        },
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "sources",
+          "attribution",
+          "generated_at",
+          "total_matched",
+          "returned",
+          "requested_aggregation",
+          "resolved_resolution",
+          "mode",
+          "representation",
+          "target_points",
+          "point_count",
+          "is_complete"
+        ],
+        "title": "SeriesResponseMeta"
+      },
+      "SpatialMetaBbox": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "const": "bbox",
+            "title": "Mode"
+          },
+          "bbox": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Bbox"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode",
+          "bbox"
+        ],
+        "title": "SpatialMetaBbox"
+      },
+      "SpatialMetaRadius": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "const": "radius",
+            "title": "Mode"
+          },
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "title": "Lon"
+          },
+          "radius_km": {
+            "type": "number",
+            "title": "Radius Km"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode",
+          "lat",
+          "lon",
+          "radius_km"
+        ],
+        "title": "SpatialMetaRadius"
+      },
+      "SpatialMetaSweden": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "const": "sweden",
+            "title": "Mode"
+          },
+          "bbox": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Bbox"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode",
+          "bbox"
+        ],
+        "title": "SpatialMetaSweden"
+      },
+      "StationResponse": {
+        "properties": {
+          "station_id": {
+            "type": "integer",
+            "title": "Station Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "distance_km": {
+            "type": "number",
+            "title": "Distance Km"
+          }
+        },
+        "type": "object",
+        "required": [
+          "station_id",
+          "name",
+          "distance_km"
+        ],
+        "title": "StationResponse"
+      },
+      "StrokesResponseMeta": {
+        "properties": {
+          "from": {
+            "type": "string",
+            "title": "From"
+          },
+          "to": {
+            "type": "string",
+            "title": "To"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "attribution": {
+            "type": "string",
+            "title": "Attribution"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "total_matched": {
+            "type": "integer",
+            "title": "Total Matched"
+          },
+          "returned": {
+            "type": "integer",
+            "title": "Returned"
+          },
+          "downsampled": {
+            "type": "boolean",
+            "title": "Downsampled"
+          },
+          "stride": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stride"
+          },
+          "sample_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Method"
+          },
+          "dropped_count": {
+            "type": "integer",
+            "title": "Dropped Count"
+          },
+          "representation": {
+            "type": "string",
+            "title": "Representation"
+          },
+          "is_complete": {
+            "type": "boolean",
+            "title": "Is Complete"
+          }
+        },
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "sources",
+          "attribution",
+          "generated_at",
+          "total_matched",
+          "returned",
+          "downsampled",
+          "stride",
+          "sample_method",
+          "dropped_count",
+          "representation",
+          "is_complete"
+        ],
+        "title": "StrokesResponseMeta"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

@@ -1,6 +1,11 @@
-import { useStation } from "./api/station";
+import { useState } from "react";
 import { SearchBox } from "./components/SearchBox";
+import { LightningExplorer } from "./components/LightningExplorer";
+import { ViewRail } from "./components/ViewRail";
+import { useHealth } from "./api/health";
+import { useStation } from "./api/station";
 import { useSelectedLocation } from "./lib/useSelectedLocation";
+import type { AppView } from "./lib/views";
 
 function StationLine({ lat, lon }: { lat: number; lon: number }) {
   const { data: station, error } = useStation(lat, lon);
@@ -14,7 +19,10 @@ function StationLine({ lat, lon }: { lat: number; lon: number }) {
 }
 
 export function App() {
+  const { data: health, error } = useHealth();
+  const healthState = error ? "unreachable" : (health?.status ?? "checking");
   const { selected, setSelected, resolving, resolveError } = useSelectedLocation();
+  const [view, setView] = useState<AppView>("explore");
 
   return (
     <div className="app">
@@ -35,12 +43,29 @@ export function App() {
           </div>
         )}
       </header>
-      <main className="workspace-main">
-        <p className="muted">
-          Search for a Swedish address to confirm geocoding and the nearest cloud
-          station. Historical charts arrive in the next milestone.
-        </p>
-      </main>
+
+      <div className="workspace">
+        <ViewRail active={view} onChange={setView} />
+        <main className="workspace-main">
+          {(view === "explore" || view === "map") && (
+            <LightningExplorer
+              selected={selected}
+              presentation={view === "map" ? "map" : "chart"}
+            />
+          )}
+          {view === "averages" && (
+            <p className="workspace-hint">Monthly climatology averages — coming after cloud history.</p>
+          )}
+          {view === "predictions" && (
+            <p className="workspace-hint">Predictions layer — gated on non-AI baselines.</p>
+          )}
+        </main>
+      </div>
+
+      <footer className="footer">
+        <span className={`dot dot-${healthState}`} aria-label={`backend ${healthState}`} />
+        backend: {healthState}
+      </footer>
     </div>
   );
 }

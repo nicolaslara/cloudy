@@ -15,11 +15,13 @@ from pathlib import Path
 from typing import Literal
 
 import httpx
-from sqlalchemy import Engine, delete, insert
+from sqlalchemy import Engine, delete, insert, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import Session, select
 
 from cloudy.config import get_settings
+from cloudy.core.cloud_types import Resolution
+from cloudy.core.series_sql import bucket_end_expr, bucket_start_expr
 from cloudy.core.units import normalize_cloud_pct
 from cloudy.db.models import CloudHourly, IngestRun, Station
 
@@ -27,6 +29,122 @@ logger = logging.getLogger(__name__)
 
 SOURCE = "smhi-metobs"
 SOURCE_VERSION = "1.0"
+
+# Rollups are a write-side concern: materialized on ingest, read straight back by
+# cloud_series. They live here (not in the read path) so the read module stays
+# pure query. "raw" is excluded — it is served live from cloud_hourly, never a
+# stored bucket.
+ROLLUP_RESOLUTIONS: tuple[Resolution, ...] = ("hour", "6h", "day", "week", "month", "year")
+
+
+def refresh_rollups(engine: Engine, station_id: int, source_version: str = "1.0") -> None:
+    """Recompute all serving rollups for one station from cloud_hourly.
+
+    Delete-then-insert per resolution so a re-ingest of corrected history fully
+    replaces stale buckets rather than layering on top. Cheap because it is
+    scoped to one station and one source_version.
+    """
+    with engine.begin() as conn:
+        for resolution in ROLLUP_RESOLUTIONS:
+            conn.execute(
+                text(
+                    """
+                    DELETE FROM cloud_rollups
+                    WHERE station_id = :station_id
+                      AND source_version = :source_version
+                      AND resolution = :resolution
+                    """
+                ),
+                {
+                    "station_id": station_id,
+                    "source_version": source_version,
+                    "resolution": resolution,
+                },
+            )
+            conn.execute(
+                text(_insert_rollup_sql(resolution)),
+                {
+                    "station_id": station_id,
+                    "source_version": source_version,
+                    "resolution": resolution,
+                },
+            )
+
+
+def _insert_rollup_sql(resolution: Resolution) -> str:
+    # Bucket boundaries come from the shared series_sql helpers so the rollups we
+    # write line up exactly with the buckets the read path expects.
+    bucket_start = bucket_start_expr(resolution)
+    bucket_end = bucket_end_expr(resolution, "bucket_start")
+    return f"""
+        INSERT INTO cloud_rollups (
+            station_id,
+            resolution,
+            bucket_start,
+            bucket_end,
+            observed_count,
+            expected_count,
+            missing_count,
+            mean_cloud_pct,
+            min_cloud_pct,
+            max_cloud_pct,
+            p05_cloud_pct,
+            p50_cloud_pct,
+            p95_cloud_pct,
+            source,
+            source_version
+        )
+        WITH hourly AS (
+            SELECT
+                station_id,
+                source,
+                source_version,
+                {bucket_start} AS bucket_start,
+                cloud_pct
+            FROM cloud_hourly
+            WHERE station_id = :station_id
+              AND source_version = :source_version
+        ),
+        bucketed AS (
+            SELECT
+                station_id,
+                source,
+                source_version,
+                :resolution AS resolution,
+                bucket_start,
+                {bucket_end} AS bucket_end,
+                cloud_pct
+            FROM hourly
+        )
+        SELECT
+            station_id,
+            resolution,
+            bucket_start,
+            bucket_end,
+            count(cloud_pct)::int AS observed_count,
+            (EXTRACT(EPOCH FROM (bucket_end - bucket_start)) / 3600.0)::int AS expected_count,
+            GREATEST(
+                ((EXTRACT(EPOCH FROM (bucket_end - bucket_start)) / 3600.0)::int)
+                - count(cloud_pct)::int,
+                0
+            ) AS missing_count,
+            avg(cloud_pct) FILTER (WHERE cloud_pct IS NOT NULL) AS mean_cloud_pct,
+            min(cloud_pct) FILTER (WHERE cloud_pct IS NOT NULL) AS min_cloud_pct,
+            max(cloud_pct) FILTER (WHERE cloud_pct IS NOT NULL) AS max_cloud_pct,
+            percentile_cont(0.05) WITHIN GROUP (ORDER BY cloud_pct)
+                FILTER (WHERE cloud_pct IS NOT NULL) AS p05_cloud_pct,
+            percentile_cont(0.50) WITHIN GROUP (ORDER BY cloud_pct)
+                FILTER (WHERE cloud_pct IS NOT NULL) AS p50_cloud_pct,
+            percentile_cont(0.95) WITHIN GROUP (ORDER BY cloud_pct)
+                FILTER (WHERE cloud_pct IS NOT NULL) AS p95_cloud_pct,
+            source,
+            source_version
+        FROM bucketed
+        GROUP BY station_id, resolution, bucket_start, bucket_end, source, source_version
+        ORDER BY bucket_start
+    """
+
+
 HISTORY_START = date(2015, 1, 1)
 Period = Literal["corrected-archive", "latest-months"]
 BASE = "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/16/station"
@@ -51,7 +169,7 @@ def csv_url(station_id: int, period: Period) -> str:
 
 def fetch_csv(station_id: int, period: Period, attempts: int = 4) -> tuple[Path, bool]:
     path = raw_path(station_id, period)
-    if path.exists():
+    if path.exists() and period == "corrected-archive":
         return path, False
     url = csv_url(station_id, period)
     for attempt in range(1, attempts + 1):
@@ -163,6 +281,7 @@ def ingest_station(
         len(rows),
         "fetched" if fetched else "replay",
     )
+    refresh_rollups(engine, station_id, SOURCE_VERSION)
     return StationResult(station_id=station_id, rows=len(rows), skipped=skipped, fetched=fetched)
 
 

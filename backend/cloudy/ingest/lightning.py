@@ -16,6 +16,7 @@ import httpx
 from sqlalchemy import Engine, delete, insert
 
 from cloudy.config import get_settings
+from cloudy.core.lightning_series import refresh_sweden_daily_rollups
 from cloudy.db.models import IngestRun, LightningEvent
 
 logger = logging.getLogger(__name__)
@@ -145,6 +146,7 @@ def ingest_day(engine: Engine, day: date) -> DayResult:
         )
         if rows:
             conn.execute(insert(LightningEvent), rows)
+        refresh_sweden_daily_rollups(conn, day, day)
     logger.info("lightning %s: %d events (%s)", day, len(rows), "fetched" if fetched else "replay")
     return DayResult(day=day, rows=len(rows), skipped=skipped, fetched=fetched)
 

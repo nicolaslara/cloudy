@@ -15,21 +15,38 @@ def main() -> None:
     serve.add_argument("--port", type=int, default=get_settings().api_port)
     serve.add_argument("--reload", action="store_true")
 
-    subparsers.add_parser("migrate", help="apply pending Alembic migrations (upgrade head)")
-    subparsers.add_parser("stamp", help="mark DB at migration head without running DDL")
-    subparsers.add_parser("create-db", help="deprecated alias for migrate")
+    subparsers.add_parser(
+        "migrate",
+        help="apply pending Alembic migrations (upgrade head)",
+    )
+    subparsers.add_parser(
+        "stamp",
+        help="mark DB at migration head without running DDL (one-time for create_all DBs)",
+    )
 
-    ingest = subparsers.add_parser("ingest", help="ingest one source for a date or range")
+    subparsers.add_parser(
+        "create-db",
+        help="deprecated alias for migrate",
+    )
+
+    ingest = subparsers.add_parser(
+        "ingest", help="ingest one source for a date or range (idempotent)"
+    )
     ingest.add_argument("source", choices=["lightning", "stations", "cloud"])
     ingest.add_argument("--date", type=date.fromisoformat, help="one day (YYYY-MM-DD)")
     ingest.add_argument("--from", dest="start", type=date.fromisoformat)
     ingest.add_argument("--to", dest="end", type=date.fromisoformat)
     ingest.add_argument("--station", type=int, help="metobs station id (cloud ingest)")
-    ingest.add_argument("--all-active", action="store_true")
+    ingest.add_argument(
+        "--all-active",
+        action="store_true",
+        help="ingest cloud for every active station",
+    )
     ingest.add_argument(
         "--period",
         choices=["corrected-archive", "latest-months"],
         default="corrected-archive",
+        help="metobs period (cloud ingest only)",
     )
 
     args = parser.parse_args()
@@ -68,20 +85,23 @@ def run_ingest(parser: argparse.ArgumentParser, args: argparse.Namespace) -> Non
     if args.source == "cloud":
         from cloudy.ingest import cloud as cloud_ingest
 
+        period = args.period
         if args.all_active:
-            cloud_results = cloud_ingest.ingest_all_active(get_engine(), period=args.period)
+            cloud_results = cloud_ingest.ingest_all_active(get_engine(), period=period)
             print(f"{sum(r.rows for r in cloud_results)} hours over {len(cloud_results)} stations")
-        elif args.station is not None:
-            result = cloud_ingest.ingest_station(get_engine(), args.station, period=args.period)
-            print(f"{result.rows} hours for station {result.station_id}")
-        else:
+            return
+        if args.station is None:
             parser.error("cloud ingest needs --station or --all-active")
+        result = cloud_ingest.ingest_station(get_engine(), args.station, period=period)
+        print(f"{result.rows} hours for station {result.station_id}")
         return
+    if args.source != "lightning":
+        parser.error(f"unknown ingest source: {args.source}")
     if args.date:
         start = end = args.date
     elif args.start and args.end:
         start, end = args.start, args.end
     else:
         parser.error("ingest needs --date or both --from and --to")
-    lightning_results = lightning.ingest_range(get_engine(), start, end)
-    print(f"{sum(r.rows for r in lightning_results)} events over {len(lightning_results)} days")
+    results = lightning.ingest_range(get_engine(), start, end)
+    print(f"{sum(r.rows for r in results)} events over {len(results)} days")

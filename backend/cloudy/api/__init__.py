@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 
 from cloudy import __version__
+from cloudy.api.cloud import router as cloud_router
 from cloudy.api.geocode import router as geocode_router
 from cloudy.api.health import router as health_router
+from cloudy.api.lightning import router as lightning_router
 from cloudy.api.station import router as station_router
 from cloudy.config import get_settings
 from cloudy.logging import configure_logging
@@ -21,5 +23,8 @@ def create_app() -> FastAPI:
     )
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(geocode_router, prefix="/api/v1")
+    # GET /lightning?format=series|strokes — filter + presentation (see lightning_query.py)
+    app.include_router(lightning_router, prefix="/api/v1")
+    app.include_router(cloud_router, prefix="/api/v1")
     app.include_router(station_router, prefix="/api/v1")
     return app

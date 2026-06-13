@@ -4,7 +4,7 @@ from pathlib import Path
 from sqlalchemy import Engine
 from sqlmodel import Session, func, select
 
-from cloudy.db.models import LightningEvent
+from cloudy.db.models import LightningDailyRollup, LightningEvent
 from cloudy.ingest import lightning
 
 FIXTURE = Path(__file__).parent / "fixtures" / "lightning-2018-07-25-sample.csv"
@@ -40,4 +40,9 @@ def test_ingest_day_is_idempotent(db: Engine, tmp_path: Path, monkeypatch) -> No
 
     with Session(db) as session:
         count = session.exec(select(func.count()).select_from(LightningEvent)).one()
+        rollup_count = session.exec(select(func.count()).select_from(LightningDailyRollup)).one()
+        rollup = session.exec(select(LightningDailyRollup)).one()
         assert count == 40
+        assert rollup_count == 1
+        assert rollup.day == DAY
+        assert rollup.all_count == 40

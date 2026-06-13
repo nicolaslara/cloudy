@@ -23,7 +23,4 @@ def upgrade_head() -> None:
 
 
 def stamp_head() -> None:
-    # For a DB whose schema was bootstrapped by SQLModel create_all: mark it as
-    # already at head (write the version row) WITHOUT running any DDL, so Alembic
-    # won't try to re-create tables that already exist. One-time reconciliation.
     command.stamp(_alembic_config(), "head")

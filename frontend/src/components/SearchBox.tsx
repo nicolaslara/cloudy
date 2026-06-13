@@ -5,10 +5,6 @@ interface SearchBoxProps {
   onSelect: (candidate: Candidate) => void;
 }
 
-// Address autocomplete with full keyboard combobox semantics. The debounce and
-// network live in useGeocode; this component only owns the input text and the
-// keyboard-highlight index. -1 means "nothing highlighted" (input itself focused),
-// so Enter with -1 deliberately does nothing rather than picking a stale row.
 export function SearchBox({ onSelect }: SearchBoxProps) {
   const [input, setInput] = useState("");
   const [highlighted, setHighlighted] = useState(-1);
