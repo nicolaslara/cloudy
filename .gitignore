@@ -1,0 +1,80 @@
+# Scratch / generated
+tmp/
+.cloudy/
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Node / frontend
+node_modules/
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Data downloads (SMHI archives can be large; keep out of git)
+data/
+*.grib
+*.grib2
+*.nc
+
+# Logs
+*.log
+
+# Test / coverage
+coverage/
+.coverage
+htmlcov/
+test-results/
+playwright-report/
+.playwright-mcp/
+
+# Editor / OS
+.DS_Store
+*.swp
+.idea/
+
+# Terraform (infra/terraform/) — never commit state or filled tfvars.
+# Commit .terraform.lock.hcl (pins provider versions for reproducible plans);
+# it is intentionally NOT listed here.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.auto.tfvars
+infra/terraform/terraform.tfvars
+!*.tfvars.example
+
+# Built SPA env carrying the prod API base — keep only the .example
+.env.production
+
+# docs/ is entirely local for now (brief, guide, research). Public docs come only
+# once the project is working, and will document how it works — not planning.
+docs/
+
+# Claude local state
+.claude/*.lock
+
+
+# Local primer/reference notes dropped at repo root
+feature_eng.txt
+
+# Stray screenshots at repo root (smokes save under .playwright-mcp/)
+/*.png
+
+# Python lives in backend/ — never at the repo root
+/pyproject.toml
+/uv.lock
+/.venv/

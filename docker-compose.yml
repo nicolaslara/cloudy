@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      # LOCAL DEV ONLY — this database is bound to localhost on the dev machine.
+      # Production uses a managed Postgres with real credentials via DATABASE_URL.
+      POSTGRES_DB: cloudy
+      POSTGRES_USER: cloudy
+      POSTGRES_PASSWORD: cloudy
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cloudy -d cloudy"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

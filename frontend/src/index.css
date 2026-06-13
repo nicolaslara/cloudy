@@ -1,0 +1,49 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #1f2933;
+  background: #f8fafc;
+}
+
+body {
+  margin: 0;
+}
+
+.page {
+  max-width: 40rem;
+  margin: 4rem auto;
+  padding: 0 1rem;
+}
+
+h1 {
+  margin-bottom: 0.25rem;
+}
+
+.tagline {
+  margin-top: 0;
+  color: #52606d;
+}
+
+.card {
+  margin-top: 2rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #d3dce6;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.card-ok {
+  border-color: #2f9e44;
+}
+
+.card-degraded {
+  border-color: #e8930c;
+}
+
+.card-unreachable {
+  border-color: #d6336c;
+}
