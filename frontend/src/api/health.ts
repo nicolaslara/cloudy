@@ -8,6 +8,8 @@ export interface Health {
   version: string;
 }
 
+// Drives the footer status dot. Polls every 30s so the dot reflects backend/db
+// reachability without a refresh — cheap heartbeat, no need for anything tighter.
 export function useHealth() {
   return useQuery({
     queryKey: ["health"],

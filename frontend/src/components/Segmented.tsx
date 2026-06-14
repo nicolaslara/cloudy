@@ -1,3 +1,7 @@
+// Generic single-select pill group (resolution, radius, scale, …). Controlled —
+// holds no state of its own — and uses aria-pressed buttons rather than radios so
+// it reads as a toolbar toggle. `format` keeps option values (e.g. 10, "auto")
+// decoupled from their display labels.
 export function Segmented<T extends string | number>({
   label,
   options,

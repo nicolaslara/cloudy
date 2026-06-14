@@ -84,6 +84,19 @@ body {
   cursor: not-allowed;
 }
 
+/* The "Lab" divider separating the exploration tools from the Normals headline:
+   a quiet uppercase label with a hairline above, so the lab reads as a secondary
+   group rather than a peer. */
+.view-rail-group {
+  margin: 0.6rem 0 0.1rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid #d3dce6;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9aa5b1;
+}
+
 .view-soon {
   font-size: 0.68rem;
   text-transform: uppercase;
@@ -400,4 +413,27 @@ h1 {
 .time-range-picker-canvas {
   width: 100%;
   height: 120px;
+}
+
+/* Normals (the deliverable). Each chart panel keeps its own distance control on
+   the same row as its title, so the filter reads as belonging to that chart. */
+.normals-panel {
+  margin-top: 1.5rem;
+}
+
+.normals-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.normals-panel-head h3 {
+  margin: 0;
+}
+
+.normals-source {
+  margin: 0.25rem 0 0.5rem;
+  color: #6b7280;
+  font-size: 0.85rem;
 }

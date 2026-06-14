@@ -3,7 +3,8 @@
 import pytest
 from pydantic import ValidationError
 
-from cloudy.core.lightning_query import LightningQuery, SpatialBounds
+from cloudy.core.spatial import SpatialBounds
+from cloudy.exploration.lightning_query import LightningQuery, spatial_meta
 
 
 def test_default_is_sweden_series() -> None:
@@ -49,8 +50,8 @@ def test_bbox_parses_sweden_subset() -> None:
 
 
 def test_spatial_bounds_meta() -> None:
-    assert SpatialBounds.from_radius(59.0, 18.0, 10).as_meta()["mode"] == "radius"
-    assert SpatialBounds.sweden().as_meta()["mode"] == "sweden"
+    assert spatial_meta(SpatialBounds.from_radius(59.0, 18.0, 10))["mode"] == "radius"
+    assert spatial_meta(SpatialBounds.sweden())["mode"] == "sweden"
 
 
 def test_date_order_validated() -> None:

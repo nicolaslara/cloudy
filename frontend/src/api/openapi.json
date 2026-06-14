@@ -68,10 +68,62 @@
         }
       }
     },
-    "/api/v1/lightning": {
+    "/api/v1/station": {
+      "get": {
+        "summary": "Station",
+        "operationId": "station_api_v1_station_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 70.0,
+              "minimum": 54.0,
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 26.0,
+              "minimum": 9.0,
+              "title": "Lon"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exploration/lightning": {
       "get": {
         "summary": "Lightning Route",
-        "operationId": "lightning_route_api_v1_lightning_get",
+        "operationId": "lightning_route_api_v1_exploration_lightning_get",
         "parameters": [
           {
             "name": "from",
@@ -266,7 +318,7 @@
                       "$ref": "#/components/schemas/LightningStrokesResponse"
                     }
                   ],
-                  "title": "Response Lightning Route Api V1 Lightning Get"
+                  "title": "Response Lightning Route Api V1 Exploration Lightning Get"
                 }
               }
             }
@@ -284,10 +336,10 @@
         }
       }
     },
-    "/api/v1/cloud": {
+    "/api/v1/exploration/cloud": {
       "get": {
         "summary": "Cloud Route",
-        "operationId": "cloud_route_api_v1_cloud_get",
+        "operationId": "cloud_route_api_v1_exploration_cloud_get",
         "parameters": [
           {
             "name": "lat",
@@ -434,31 +486,66 @@
         }
       }
     },
-    "/api/v1/station": {
+    "/api/v1/climatology/cloud": {
       "get": {
-        "summary": "Station",
-        "operationId": "station_api_v1_station_get",
+        "summary": "Cloud Route",
+        "operationId": "cloud_route_api_v1_climatology_cloud_get",
         "parameters": [
           {
             "name": "lat",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": "number",
-              "maximum": 70.0,
-              "minimum": 54.0,
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "Lat"
             }
           },
           {
             "name": "lon",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": "number",
-              "maximum": 26.0,
-              "minimum": 9.0,
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "Lon"
+            }
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "day",
+                "month",
+                "year"
+              ],
+              "type": "string",
+              "default": "month",
+              "title": "Period"
+            }
+          },
+          {
+            "name": "radius_km",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 25,
+              "title": "Radius Km"
             }
           }
         ],
@@ -468,7 +555,94 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StationResponse"
+                  "$ref": "#/components/schemas/CloudClimatologyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/climatology/lightning": {
+      "get": {
+        "summary": "Lightning Route",
+        "operationId": "lightning_route_api_v1_climatology_lightning_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lon"
+            }
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "day",
+                "month",
+                "year"
+              ],
+              "type": "string",
+              "default": "month",
+              "title": "Period"
+            }
+          },
+          {
+            "name": "radius_km",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "title": "Radius Km"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LightningClimatologyResponse"
                 }
               }
             }
@@ -489,6 +663,301 @@
   },
   "components": {
     "schemas": {
+      "ClimatologyMeta": {
+        "properties": {
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "attribution": {
+            "type": "string",
+            "title": "Attribution"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "year_count": {
+            "type": "integer",
+            "title": "Year Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sources",
+          "attribution",
+          "generated_at",
+          "year_count"
+        ],
+        "title": "ClimatologyMeta"
+      },
+      "ClimatologyStationMeta": {
+        "properties": {
+          "station_id": {
+            "type": "integer",
+            "title": "Station Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "distance_km": {
+            "type": "number",
+            "title": "Distance Km"
+          }
+        },
+        "type": "object",
+        "required": [
+          "station_id",
+          "name",
+          "distance_km"
+        ],
+        "title": "ClimatologyStationMeta"
+      },
+      "CloudClimatologyResponse": {
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "station",
+              "sweden"
+            ],
+            "title": "Scope"
+          },
+          "station": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClimatologyStationMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "station_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Station Count"
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "day",
+              "month",
+              "year"
+            ],
+            "title": "Period"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/CloudNormalPoint"
+            },
+            "type": "array",
+            "title": "Series"
+          },
+          "current_month": {
+            "$ref": "#/components/schemas/CloudCurrentMonthExpectation"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ClimatologyMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scope",
+          "station",
+          "station_count",
+          "period",
+          "series",
+          "current_month",
+          "meta"
+        ],
+        "title": "CloudClimatologyResponse"
+      },
+      "CloudCurrentMonthExpectation": {
+        "properties": {
+          "month": {
+            "type": "integer",
+            "title": "Month"
+          },
+          "observed_so_far_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed So Far Pct"
+          },
+          "observed_days": {
+            "type": "integer",
+            "title": "Observed Days"
+          },
+          "climatology_tail_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Climatology Tail Pct"
+          },
+          "expected_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Pct"
+          },
+          "baseline_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "observed_so_far_pct",
+          "observed_days",
+          "climatology_tail_pct",
+          "expected_pct",
+          "baseline_pct"
+        ],
+        "title": "CloudCurrentMonthExpectation",
+        "description": "Live expectation for the month in progress: observed-so-far + tail.\n\n`expected_pct` blends the mean of hours already observed this month with the\nmonth's climatological mean for the days not yet elapsed, weighted by how\nmuch of the month each part covers. `baseline_pct` is the plain all-years\nmonthly normal \u2014 what you'd have guessed with no current observations \u2014 so\nthe UI can show how far this month is running from typical."
+      },
+      "CloudNormalPoint": {
+        "properties": {
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "mean_cloud_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Cloud Pct"
+          },
+          "p10_cloud_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P10 Cloud Pct"
+          },
+          "p50_cloud_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P50 Cloud Pct"
+          },
+          "p90_cloud_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P90 Cloud Pct"
+          },
+          "clear_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clear Pct"
+          },
+          "partial_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partial Pct"
+          },
+          "overcast_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overcast Pct"
+          },
+          "observed_count": {
+            "type": "integer",
+            "title": "Observed Count"
+          },
+          "year_count": {
+            "type": "integer",
+            "title": "Year Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period",
+          "mean_cloud_pct",
+          "p10_cloud_pct",
+          "p50_cloud_pct",
+          "p90_cloud_pct",
+          "clear_pct",
+          "partial_pct",
+          "overcast_pct",
+          "observed_count",
+          "year_count"
+        ],
+        "title": "CloudNormalPoint",
+        "description": "The typical cloud cover for one recurring slot, with a spread band.\n\nThe percentile triple (p10/p50/p90) is what turns a flat average into an\nhonest expectation: a place can average 60% cloud either by being reliably\ngrey or by swinging between clear and overcast, and only the band shows that.\nCounts are carried so a thin slot can't masquerade as a confident one."
+      },
       "CloudPeriod": {
         "properties": {
           "period": {
@@ -856,6 +1325,200 @@
           "version"
         ],
         "title": "HealthResponse"
+      },
+      "LightningClimatologyResponse": {
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "radius",
+              "sweden"
+            ],
+            "title": "Scope"
+          },
+          "lat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lat"
+          },
+          "lon": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lon"
+          },
+          "radius_km": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Radius Km"
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "day",
+              "month",
+              "year"
+            ],
+            "title": "Period"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/LightningNormalPoint"
+            },
+            "type": "array",
+            "title": "Series"
+          },
+          "current_month": {
+            "$ref": "#/components/schemas/LightningCurrentMonthExpectation"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ClimatologyMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scope",
+          "lat",
+          "lon",
+          "radius_km",
+          "period",
+          "series",
+          "current_month",
+          "meta"
+        ],
+        "title": "LightningClimatologyResponse"
+      },
+      "LightningCurrentMonthExpectation": {
+        "properties": {
+          "month": {
+            "type": "integer",
+            "title": "Month"
+          },
+          "observed_lightning_days": {
+            "type": "integer",
+            "title": "Observed Lightning Days"
+          },
+          "observed_days": {
+            "type": "integer",
+            "title": "Observed Days"
+          },
+          "climatology_tail_days": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Climatology Tail Days"
+          },
+          "expected_lightning_days": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Lightning Days"
+          },
+          "baseline_days": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "observed_lightning_days",
+          "observed_days",
+          "climatology_tail_days",
+          "expected_lightning_days",
+          "baseline_days"
+        ],
+        "title": "LightningCurrentMonthExpectation",
+        "description": "Live lightning expectation for the month in progress.\n\nLightning days are additive (a count, not an average), so the blend is a sum:\nthe days already observed this month plus the climatological expectation for\nthe days still to come. `baseline_days` is the plain monthly normal."
+      },
+      "LightningNormalPoint": {
+        "properties": {
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "strike_day_probability": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strike Day Probability"
+          },
+          "expected_lightning_days": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Lightning Days"
+          },
+          "mean_count": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Count"
+          },
+          "year_count": {
+            "type": "integer",
+            "title": "Year Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period",
+          "strike_day_probability",
+          "expected_lightning_days",
+          "mean_count",
+          "year_count"
+        ],
+        "title": "LightningNormalPoint",
+        "description": "The typical lightning activity for one recurring slot within a radius.\n\n`strike_day_probability` is the headline: the chance that any given day in\nthis slot sees at least one discharge nearby \u2014 the same notion as SMHI's\nthunder-day maps. `expected_lightning_days` is that probability expressed as\ndays-per-occurrence of the slot (e.g. per July), and `mean_count` is the raw\ndischarge volume for callers who want intensity rather than incidence."
       },
       "LightningPeriod": {
         "properties": {

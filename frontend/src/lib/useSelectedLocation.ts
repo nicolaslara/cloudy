@@ -6,6 +6,13 @@ import {
   writeLocationToUrl,
 } from "./locationUrl";
 
+/**
+ * The URL is the source of truth for the selected location, so a link is
+ * shareable and back/forward navigates between locations. This hook keeps React
+ * state in sync both ways: it resolves the URL into a Candidate (coords are used
+ * directly; a free-text query is geocoded, taking the first Sweden match), and
+ * writes the URL back whenever selection changes.
+ */
 export function useSelectedLocation() {
   const [selected, setSelectedState] = useState<Candidate | null>(null);
   const [resolving, setResolving] = useState(false);
@@ -48,6 +55,8 @@ export function useSelectedLocation() {
     // Microtask: URL→state resolution must not setState synchronously in the
     // effect body (react-hooks rule; avoids cascading first-paint renders).
     queueMicrotask(() => void applyFromUrl(window.location.search));
+    // Back/forward changes the URL without re-running this hook, so re-resolve
+    // from location on popstate to keep state and address bar agreeing.
     const onPopState = () => void applyFromUrl(window.location.search);
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);

@@ -8,10 +8,14 @@ import pytest
 from sqlalchemy import Engine, delete
 from sqlmodel import Session
 
-from cloudy.core.lightning_query import SpatialBounds
-from cloudy.core.lightning_series import count_events, query_series, refresh_sweden_daily_rollups
-from cloudy.core.series_plan import plan_series
+from cloudy.core.spatial import SpatialBounds
 from cloudy.db.models import LightningEvent
+from cloudy.exploration.lightning_series import (
+    count_events,
+    query_series,
+    refresh_sweden_daily_rollups,
+)
+from cloudy.exploration.series_plan import plan_series
 
 
 def _radius(lat: float, lon: float, radius_km: float) -> SpatialBounds:

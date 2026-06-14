@@ -11,6 +11,8 @@ export function useElementWidth<T extends HTMLElement>() {
     const update = () => setWidth(Math.round(element.getBoundingClientRect().width));
     update();
 
+    // Fallback for environments without ResizeObserver (jsdom in tests): window
+    // resize is coarser but enough for the cases that lack the observer.
     if (typeof ResizeObserver === "undefined") {
       window.addEventListener("resize", update);
       return () => window.removeEventListener("resize", update);

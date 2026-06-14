@@ -8,7 +8,7 @@ async function mockMapApis(page: Page) {
   await page.route("**/api/v1/station?**", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(STATION) }),
   );
-  await page.route("**/api/v1/lightning?**", (route) => {
+  await page.route("**/api/v1/exploration/lightning?**", (route) => {
     const url = new URL(route.request().url());
     if (url.searchParams.get("format") === "strokes") {
       return route.fulfill({

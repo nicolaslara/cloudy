@@ -20,6 +20,10 @@ export function useGeocode(input: string) {
   const [query, setQuery] = useState("");
 
   useEffect(() => {
+    // Debounce keystrokes into a single committed `query`: each new input cancels
+    // the pending timer, so we only fire a request once typing pauses for 300 ms.
+    // The <3-char floor clears the query (stops short, noisy lookups), and the
+    // cleanup guarantees no in-flight timer outlives the latest keystroke.
     const trimmed = input.trim();
     const handle = setTimeout(() => setQuery(trimmed.length >= 3 ? trimmed : ""), 300);
     return () => clearTimeout(handle);

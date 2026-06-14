@@ -28,6 +28,9 @@ class MemoryCache:
         self._clock = clock
 
     def get(self, key: str) -> str | None:
+        # Expiry is lazy: a stale entry is dropped on the read that finds it rather
+        # than swept on a timer. A live read also moves the key to the end so it
+        # counts as recently used for eviction.
         entry = self._entries.get(key)
         if entry is None:
             return None
@@ -41,6 +44,7 @@ class MemoryCache:
     def set(self, key: str, value: str, ttl_s: int) -> None:
         self._entries[key] = (self._clock() + ttl_s, value)
         self._entries.move_to_end(key)
+        # Evict from the front — the least-recently-used keys — once over capacity.
         while len(self._entries) > self._maxsize:
             self._entries.popitem(last=False)
 

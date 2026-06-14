@@ -6,9 +6,9 @@ import pytest
 from sqlalchemy import Engine
 from sqlmodel import Session, select
 
-from cloudy.core.cloud_series import query_series, query_sweden_series
-from cloudy.core.series_plan import plan_series
 from cloudy.db.models import CloudHourly, Station
+from cloudy.exploration.cloud_series import query_series, query_sweden_series
+from cloudy.exploration.series_plan import plan_series
 from cloudy.ingest.cloud import refresh_rollups
 
 FROM, TO = date(2030, 1, 1), date(2030, 12, 31)

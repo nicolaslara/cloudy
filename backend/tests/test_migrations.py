@@ -43,7 +43,9 @@ def test_upgrade_head_creates_tables(_empty_db_url: str, monkeypatch: pytest.Mon
         tables = {
             row[0]
             for row in conn.execute(
-                text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
+                text(
+                    "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
+                )
             )
         }
         version = conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one()

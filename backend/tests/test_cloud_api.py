@@ -1,4 +1,4 @@
-"""Contract tests for GET /api/v1/cloud with the SQL seam monkeypatched."""
+"""Contract tests for GET /api/v1/exploration/cloud with the SQL seam monkeypatched."""
 
 from collections.abc import Iterator
 from datetime import date
@@ -10,8 +10,8 @@ from sqlalchemy import Engine
 
 from cloudy.api import create_app
 from cloudy.core import cache as cache_module
-from cloudy.core import cloud_read, cloud_series
 from cloudy.db import session as db_session
+from cloudy.exploration import cloud_read, cloud_series
 
 SERIES: list[dict[str, Any]] = [
     {
@@ -112,7 +112,7 @@ def client(spy: QuerySpy, stations_sample: Engine, monkeypatch: pytest.MonkeyPat
 
 
 def test_cloud_defaults_to_sweden_scope(client: TestClient) -> None:
-    response = client.get("/api/v1/cloud")
+    response = client.get("/api/v1/exploration/cloud")
     assert response.status_code == 200
     body = response.json()
     assert body["station"] is None
@@ -121,7 +121,7 @@ def test_cloud_defaults_to_sweden_scope(client: TestClient) -> None:
 
 
 def test_cloud_series_defaults(client: TestClient, spy: QuerySpy) -> None:
-    response = client.get("/api/v1/cloud", params={"lat": 59.33, "lon": 18.06})
+    response = client.get("/api/v1/exploration/cloud", params={"lat": 59.33, "lon": 18.06})
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["aggregation"] == "auto"
@@ -133,7 +133,7 @@ def test_cloud_series_defaults(client: TestClient, spy: QuerySpy) -> None:
 
 def test_cloud_passes_params(client: TestClient) -> None:
     response = client.get(
-        "/api/v1/cloud",
+        "/api/v1/exploration/cloud",
         params={
             "lat": 59.33,
             "lon": 18.06,
@@ -157,12 +157,12 @@ def test_cloud_passes_params(client: TestClient) -> None:
     ],
 )
 def test_invalid_params_are_422(client: TestClient, params: dict[str, Any]) -> None:
-    assert client.get("/api/v1/cloud", params=params).status_code == 422
+    assert client.get("/api/v1/exploration/cloud", params=params).status_code == 422
 
 
 def test_legacy_granularity_param_is_not_public_contract(client: TestClient) -> None:
     response = client.get(
-        "/api/v1/cloud",
+        "/api/v1/exploration/cloud",
         params={"lat": 59.33, "lon": 18.06, "granularity": "month"},
     )
     assert response.status_code == 200
@@ -171,7 +171,7 @@ def test_legacy_granularity_param_is_not_public_contract(client: TestClient) -> 
 
 def test_second_identical_call_is_served_from_cache(client: TestClient) -> None:
     params = {"lat": 59.33, "lon": 18.06, "to": "2026-01-01"}
-    first = client.get("/api/v1/cloud", params=params)
-    second = client.get("/api/v1/cloud", params=params)
+    first = client.get("/api/v1/exploration/cloud", params=params)
+    second = client.get("/api/v1/exploration/cloud", params=params)
     assert first.status_code == second.status_code == 200
     assert second.json() == first.json()

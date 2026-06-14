@@ -38,40 +38,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/lightning": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Lightning Route */
-        get: operations["lightning_route_api_v1_lightning_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/cloud": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Cloud Route */
-        get: operations["cloud_route_api_v1_cloud_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/station": {
         parameters: {
             query?: never;
@@ -89,10 +55,173 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/exploration/lightning": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lightning Route */
+        get: operations["lightning_route_api_v1_exploration_lightning_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exploration/cloud": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cloud Route */
+        get: operations["cloud_route_api_v1_exploration_cloud_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/climatology/cloud": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cloud Route */
+        get: operations["cloud_route_api_v1_climatology_cloud_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/climatology/lightning": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lightning Route */
+        get: operations["lightning_route_api_v1_climatology_lightning_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ClimatologyMeta */
+        ClimatologyMeta: {
+            /** Sources */
+            sources: string[];
+            /** Attribution */
+            attribution: string;
+            /** Generated At */
+            generated_at: string;
+            /** Year Count */
+            year_count: number;
+        };
+        /** ClimatologyStationMeta */
+        ClimatologyStationMeta: {
+            /** Station Id */
+            station_id: number;
+            /** Name */
+            name: string;
+            /** Distance Km */
+            distance_km: number;
+        };
+        /** CloudClimatologyResponse */
+        CloudClimatologyResponse: {
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "station" | "sweden";
+            station: components["schemas"]["ClimatologyStationMeta"] | null;
+            /** Station Count */
+            station_count: number | null;
+            /**
+             * Period
+             * @enum {string}
+             */
+            period: "day" | "month" | "year";
+            /** Series */
+            series: components["schemas"]["CloudNormalPoint"][];
+            current_month: components["schemas"]["CloudCurrentMonthExpectation"];
+            meta: components["schemas"]["ClimatologyMeta"];
+        };
+        /**
+         * CloudCurrentMonthExpectation
+         * @description Live expectation for the month in progress: observed-so-far + tail.
+         *
+         *     `expected_pct` blends the mean of hours already observed this month with the
+         *     month's climatological mean for the days not yet elapsed, weighted by how
+         *     much of the month each part covers. `baseline_pct` is the plain all-years
+         *     monthly normal — what you'd have guessed with no current observations — so
+         *     the UI can show how far this month is running from typical.
+         */
+        CloudCurrentMonthExpectation: {
+            /** Month */
+            month: number;
+            /** Observed So Far Pct */
+            observed_so_far_pct: number | null;
+            /** Observed Days */
+            observed_days: number;
+            /** Climatology Tail Pct */
+            climatology_tail_pct: number | null;
+            /** Expected Pct */
+            expected_pct: number | null;
+            /** Baseline Pct */
+            baseline_pct: number | null;
+        };
+        /**
+         * CloudNormalPoint
+         * @description The typical cloud cover for one recurring slot, with a spread band.
+         *
+         *     The percentile triple (p10/p50/p90) is what turns a flat average into an
+         *     honest expectation: a place can average 60% cloud either by being reliably
+         *     grey or by swinging between clear and overcast, and only the band shows that.
+         *     Counts are carried so a thin slot can't masquerade as a confident one.
+         */
+        CloudNormalPoint: {
+            /** Period */
+            period: string;
+            /** Mean Cloud Pct */
+            mean_cloud_pct: number | null;
+            /** P10 Cloud Pct */
+            p10_cloud_pct: number | null;
+            /** P50 Cloud Pct */
+            p50_cloud_pct: number | null;
+            /** P90 Cloud Pct */
+            p90_cloud_pct: number | null;
+            /** Clear Pct */
+            clear_pct: number | null;
+            /** Partial Pct */
+            partial_pct: number | null;
+            /** Overcast Pct */
+            overcast_pct: number | null;
+            /** Observed Count */
+            observed_count: number;
+            /** Year Count */
+            year_count: number;
+        };
         /** CloudPeriod */
         CloudPeriod: {
             /** Period */
@@ -213,6 +342,73 @@ export interface components {
             db: "up" | "down";
             /** Version */
             version: string;
+        };
+        /** LightningClimatologyResponse */
+        LightningClimatologyResponse: {
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "radius" | "sweden";
+            /** Lat */
+            lat: number | null;
+            /** Lon */
+            lon: number | null;
+            /** Radius Km */
+            radius_km: number | null;
+            /**
+             * Period
+             * @enum {string}
+             */
+            period: "day" | "month" | "year";
+            /** Series */
+            series: components["schemas"]["LightningNormalPoint"][];
+            current_month: components["schemas"]["LightningCurrentMonthExpectation"];
+            meta: components["schemas"]["ClimatologyMeta"];
+        };
+        /**
+         * LightningCurrentMonthExpectation
+         * @description Live lightning expectation for the month in progress.
+         *
+         *     Lightning days are additive (a count, not an average), so the blend is a sum:
+         *     the days already observed this month plus the climatological expectation for
+         *     the days still to come. `baseline_days` is the plain monthly normal.
+         */
+        LightningCurrentMonthExpectation: {
+            /** Month */
+            month: number;
+            /** Observed Lightning Days */
+            observed_lightning_days: number;
+            /** Observed Days */
+            observed_days: number;
+            /** Climatology Tail Days */
+            climatology_tail_days: number | null;
+            /** Expected Lightning Days */
+            expected_lightning_days: number | null;
+            /** Baseline Days */
+            baseline_days: number | null;
+        };
+        /**
+         * LightningNormalPoint
+         * @description The typical lightning activity for one recurring slot within a radius.
+         *
+         *     `strike_day_probability` is the headline: the chance that any given day in
+         *     this slot sees at least one discharge nearby — the same notion as SMHI's
+         *     thunder-day maps. `expected_lightning_days` is that probability expressed as
+         *     days-per-occurrence of the slot (e.g. per July), and `mean_count` is the raw
+         *     discharge volume for callers who want intensity rather than incidence.
+         */
+        LightningNormalPoint: {
+            /** Period */
+            period: string;
+            /** Strike Day Probability */
+            strike_day_probability: number | null;
+            /** Expected Lightning Days */
+            expected_lightning_days: number | null;
+            /** Mean Count */
+            mean_count: number | null;
+            /** Year Count */
+            year_count: number;
         };
         /** LightningPeriod */
         LightningPeriod: {
@@ -447,7 +643,39 @@ export interface operations {
             };
         };
     };
-    lightning_route_api_v1_lightning_get: {
+    station_api_v1_station_get: {
+        parameters: {
+            query: {
+                lat: number;
+                lon: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lightning_route_api_v1_exploration_lightning_get: {
         parameters: {
             query?: {
                 from?: string;
@@ -488,7 +716,7 @@ export interface operations {
             };
         };
     };
-    cloud_route_api_v1_cloud_get: {
+    cloud_route_api_v1_exploration_cloud_get: {
         parameters: {
             query?: {
                 lat?: number | null;
@@ -525,11 +753,13 @@ export interface operations {
             };
         };
     };
-    station_api_v1_station_get: {
+    cloud_route_api_v1_climatology_cloud_get: {
         parameters: {
-            query: {
-                lat: number;
-                lon: number;
+            query?: {
+                lat?: number | null;
+                lon?: number | null;
+                period?: "day" | "month" | "year";
+                radius_km?: number;
             };
             header?: never;
             path?: never;
@@ -543,7 +773,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StationResponse"];
+                    "application/json": components["schemas"]["CloudClimatologyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lightning_route_api_v1_climatology_lightning_get: {
+        parameters: {
+            query?: {
+                lat?: number | null;
+                lon?: number | null;
+                period?: "day" | "month" | "year";
+                radius_km?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LightningClimatologyResponse"];
                 };
             };
             /** @description Validation Error */

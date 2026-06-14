@@ -1,3 +1,9 @@
+"""GET /api/v1/geocode — address → coordinate candidates via the active provider.
+
+Thin pass-through to the geocode seam; the only real logic is mapping upstream
+failures to honest statuses so the frontend can degrade autocomplete cleanly.
+"""
+
 import logging
 
 import httpx
@@ -15,6 +21,9 @@ def geocode(q: str = Query(min_length=3, max_length=200)) -> list[GeocodeCandida
     geocoder = get_geocoder()
     try:
         candidates = geocoder.search(q)
+    # Surface upstream rate-limiting verbatim as 429 (the frontend pauses
+    # autocomplete on it); fold every other upstream failure into 502 so a
+    # provider outage reads as "bad gateway", never our own 500.
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code == 429:  # frontend degrades autocomplete on this
             raise HTTPException(429, "geocoder rate-limited") from exc

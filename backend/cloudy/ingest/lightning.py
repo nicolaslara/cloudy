@@ -13,13 +13,63 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 
 import httpx
-from sqlalchemy import Engine, delete, insert
+from sqlalchemy import Connection, Engine, delete, insert, text
 
 from cloudy.config import get_settings
-from cloudy.core.lightning_series import refresh_sweden_daily_rollups
 from cloudy.db.models import IngestRun, LightningEvent
 
 logger = logging.getLogger(__name__)
+
+# Write-side serving rollups. Refreshing the Sweden-wide daily summary is an
+# ingest concern — it must commit in the same transaction as the events — so it
+# lives in the foundation beside the events it summarizes, not in the read path.
+# The exploration reader re-aggregates these daily rows up to week/month/year.
+_DELETE_SWEDEN_DAILY_ROLLUPS_SQL = text(
+    """
+    DELETE FROM lightning_daily_rollups
+    WHERE day BETWEEN :date_from AND :date_to
+    """
+)
+
+_INSERT_SWEDEN_DAILY_ROLLUPS_SQL = text(
+    """
+    INSERT INTO lightning_daily_rollups (
+        day,
+        bucket_start,
+        bucket_end,
+        cg_count,
+        all_count,
+        lightning_days,
+        max_abs_peak_ka,
+        strongest_event_time,
+        source,
+        source_version
+    )
+    SELECT
+        day,
+        day::timestamp AT TIME ZONE 'UTC' AS bucket_start,
+        (day + 1)::timestamp AT TIME ZONE 'UTC' AS bucket_end,
+        count(*) FILTER (WHERE cloud_indicator = 0)::int AS cg_count,
+        count(*)::int AS all_count,
+        1 AS lightning_days,
+        max(abs(peak_current_ka)) AS max_abs_peak_ka,
+        (array_agg(ts_utc ORDER BY abs(peak_current_ka) DESC, ts_utc))[1]
+            AS strongest_event_time,
+        source,
+        source_version
+    FROM lightning_events
+    WHERE day BETWEEN :date_from AND :date_to
+    GROUP BY day, source, source_version
+    ORDER BY day
+    """
+)
+
+
+def refresh_sweden_daily_rollups(conn: Connection, date_from: date, date_to: date) -> None:
+    """Refresh Sweden-wide daily serving rollups after lightning ingest."""
+    conn.execute(_DELETE_SWEDEN_DAILY_ROLLUPS_SQL, {"date_from": date_from, "date_to": date_to})
+    conn.execute(_INSERT_SWEDEN_DAILY_ROLLUPS_SQL, {"date_from": date_from, "date_to": date_to})
+
 
 SOURCE = "smhi-lightning"
 SOURCE_VERSION = "1.0"
@@ -146,6 +196,9 @@ def ingest_day(engine: Engine, day: date) -> DayResult:
         )
         if rows:
             conn.execute(insert(LightningEvent), rows)
+        # Refresh the day's rollup inside the same transaction so events and their
+        # Sweden-wide summary commit atomically — readers never see one without
+        # the other, even mid-backfill.
         refresh_sweden_daily_rollups(conn, day, day)
     logger.info("lightning %s: %d events (%s)", day, len(rows), "fetched" if fetched else "replay")
     return DayResult(day=day, rows=len(rows), skipped=skipped, fetched=fetched)
@@ -174,6 +227,8 @@ def ingest_range(engine: Engine, start: date, end: date, delay_s: float = 1.0) -
         while day <= end:
             result = ingest_day(engine, day)
             results.append(result)
+            # Only rate-limit when we actually hit SMHI; a replay from data/raw
+            # touches no network, so a cached backfill runs at full speed.
             if result.fetched and day < end:
                 time.sleep(delay_s)
             day = date.fromordinal(day.toordinal() + 1)
@@ -182,6 +237,9 @@ def ingest_range(engine: Engine, start: date, end: date, delay_s: float = 1.0) -
         status = "failed"
         detail = f"at {results[-1].day if results else start}: {exc}"
         raise
+    # Always close out the IngestRun, even on failure: the row is the audit trail
+    # and resume watermark, so a crashed backfill must land as status="failed"
+    # with where it stopped, never as a row stuck forever in "running".
     finally:
         with Session(engine) as session:
             finished = session.get(IngestRun, run.id)

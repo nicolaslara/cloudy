@@ -7,9 +7,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 
 from cloudy.api import create_app
-from cloudy.core import lightning_events
-from cloudy.core.lightning_query import SpatialBounds
+from cloudy.core.spatial import SpatialBounds
 from cloudy.db import session as db_session
+from cloudy.exploration import lightning_events
 
 
 @pytest.fixture
@@ -52,7 +52,7 @@ def test_query_events_returns_priority_sample_when_over_limit(lightning_sample: 
 
 def test_strokes_api_shape(client: TestClient, lightning_sample: Engine) -> None:
     response = client.get(
-        "/api/v1/lightning",
+        "/api/v1/exploration/lightning",
         params={"format": "strokes", "from": "2018-07-25", "to": "2018-07-25", "limit": 5},
     )
     assert response.status_code == 200, response.text
@@ -67,13 +67,15 @@ def test_strokes_api_shape(client: TestClient, lightning_sample: Engine) -> None
 
 
 def test_strokes_api_rejects_invalid_bbox(client: TestClient) -> None:
-    response = client.get("/api/v1/lightning", params={"format": "strokes", "bbox": "1,2,3"})
+    response = client.get(
+        "/api/v1/exploration/lightning", params={"format": "strokes", "bbox": "1,2,3"}
+    )
     assert response.status_code == 422
 
 
 def test_strokes_api_rejects_bbox_with_radius(client: TestClient) -> None:
     response = client.get(
-        "/api/v1/lightning",
+        "/api/v1/exploration/lightning",
         params={
             "format": "strokes",
             "lat": 59.33,
@@ -87,7 +89,7 @@ def test_strokes_api_rejects_bbox_with_radius(client: TestClient) -> None:
 
 def test_strokes_api_location_filter(client: TestClient, lightning_sample: Engine) -> None:
     response = client.get(
-        "/api/v1/lightning",
+        "/api/v1/exploration/lightning",
         params={
             "format": "strokes",
             "from": "2018-07-25",

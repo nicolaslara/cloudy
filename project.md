@@ -163,6 +163,48 @@ These come from the brief and the owner's direction; they override convenience.
   explicitly incomplete visual fallback, not a chart compression strategy; v1
   uses priority sampling for representative dots rather than stride sampling.
 
+### Deliverable vs lab: the exploration / climatology split (locked 2026-06-14)
+
+The codebase separates the **product** from the **lab**, so the deliverable can
+be presented without the heavier exploration machinery in view. Both sit on one
+shared foundation.
+
+- **Foundation (shared):** ingestion (`cloudy/ingest`), the SQL store
+  (`cloudy/db`), geocoding (`cloudy/geocode`), and the source-agnostic helpers in
+  `cloudy/core` (`units`, `geo`, `spatial`, `series_sql`, `cache`). Nothing in the
+  foundation imports the layers above it; the two upper layers never import each
+  other. The frontend mirror is `src/lib` + `src/api` + shared components, with a
+  generic `useChart` so the deliverable draws charts without touching lab code.
+- **Exploration (the lab):** the level-of-detail planner and the raw time-series /
+  strokes / map readers — `cloudy/exploration/*` behind `/api/v1/exploration/*`,
+  and `src/features/exploration/*` on the frontend. This is the data workbench
+  (zoomable charts, the map, raw events); it is deliberately secondary.
+- **Climatology (the deliverable, UI name "Normals"):** historical averages —
+  `cloudy/climatology/*` behind `/api/v1/climatology/*`, and
+  `src/features/normals/*`. "climatology" is the precise domain term (and the
+  baseline every later model must beat); **"Normals"** is the user-facing label.
+
+What the Normals product answers and how (locked 2026-06-14):
+
+- The headline is **normal cloud cover per period** (mean % per calendar month —
+  the brief's `expected_cloud_for_month`) drawn as one bar per month shaded by
+  cloudiness; the clear/partly/overcast split lives in the tooltip. Lightning is
+  **strike-day probability + expected lightning-days** per period within a radius.
+- Period is **monthly** (the canonical normal); day-of-year and per-year slices
+  stay available in the API but are not a product control. The current-month
+  **live expectation** = observed-so-far + climatology tail (SNOW forecast blend
+  deferred to a later phase).
+- With **no location**, Normals shows the **Sweden-wide aggregate** (cloud pooled
+  across all active stations; lightning across the whole country) rather than an
+  empty prompt — the page always answers the question.
+- **Distance filters sit beside the chart they control** and differ by data
+  nature: cloud stations are sparse (~50-100 km apart) so the cloud distance pools
+  stations within **50/100 km** (falling back to the single nearest when none are
+  in range); lightning is dense point data, so its radius stays **10/25 km**.
+- Frontend nav: **Normals** (default) and **Predictions** (roadmap, disabled) are
+  the product group up top; **Exploration** and **Map** sit below in a "Lab"
+  group.
+
 ---
 
 ## Core modeling definitions (distilled from `docs/local/brief.md`)
@@ -231,6 +273,14 @@ Sequence is gated: deploy starts only after the foundation gate; non-AI
 predictions start only after the foundation gate; AI starts only after the
 non-AI baselines are scored. Phase 1's gate is the product proving itself
 locally.
+
+**Foundation status (2026-06-14):** the local product is in place end-to-end —
+SMHI cloud + lightning ingested, the **Normals** climatology deliverable
+(monthly normals + current-month expectation, for a location or Sweden-wide)
+served and rendered in the browser on real data, cleanly separated from the
+exploration lab (see the split locked above). Remaining before calling the gate
+done: deploy (Phase 2) and any owner-driven polish; the SNOW forecast blend in
+the current-month expectation is intentionally deferred.
 
 ---
 

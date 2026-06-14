@@ -20,8 +20,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import Session, select
 
 from cloudy.config import get_settings
-from cloudy.core.cloud_types import Resolution
-from cloudy.core.series_sql import bucket_end_expr, bucket_start_expr
+from cloudy.core.series_sql import ResolutionLabel, bucket_end_expr, bucket_start_expr
 from cloudy.core.units import normalize_cloud_pct
 from cloudy.db.models import CloudHourly, IngestRun, Station
 
@@ -34,7 +33,7 @@ SOURCE_VERSION = "1.0"
 # cloud_series. They live here (not in the read path) so the read module stays
 # pure query. "raw" is excluded — it is served live from cloud_hourly, never a
 # stored bucket.
-ROLLUP_RESOLUTIONS: tuple[Resolution, ...] = ("hour", "6h", "day", "week", "month", "year")
+ROLLUP_RESOLUTIONS: tuple[ResolutionLabel, ...] = ("hour", "6h", "day", "week", "month", "year")
 
 
 def refresh_rollups(engine: Engine, station_id: int, source_version: str = "1.0") -> None:
@@ -71,7 +70,7 @@ def refresh_rollups(engine: Engine, station_id: int, source_version: str = "1.0"
             )
 
 
-def _insert_rollup_sql(resolution: Resolution) -> str:
+def _insert_rollup_sql(resolution: ResolutionLabel) -> str:
     # Bucket boundaries come from the shared series_sql helpers so the rollups we
     # write line up exactly with the buckets the read path expects.
     bucket_start = bucket_start_expr(resolution)
@@ -169,6 +168,9 @@ def csv_url(station_id: int, period: Period) -> str:
 
 def fetch_csv(station_id: int, period: Period, attempts: int = 4) -> tuple[Path, bool]:
     path = raw_path(station_id, period)
+    # corrected-archive is immutable history: once archived we replay from disk
+    # forever. latest-months is a rolling window SMHI keeps revising, so it must
+    # always refetch — a cached copy would silently go stale.
     if path.exists() and period == "corrected-archive":
         return path, False
     url = csv_url(station_id, period)
@@ -178,6 +180,9 @@ def fetch_csv(station_id: int, period: Period, attempts: int = 4) -> tuple[Path,
             response.raise_for_status()
             break
         except (httpx.TransportError, httpx.HTTPStatusError) as exc:
+            # Only retry what's worth retrying: network errors and SMHI's transient
+            # 5xx/429. A 4xx (e.g. unknown station) is permanent — fail fast rather
+            # than burn the backoff budget on a request that will never succeed.
             transient = isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (
                 429,
                 500,
@@ -254,6 +259,10 @@ def ingest_station(
         logger.warning("cloud %s/%s: skipped %d malformed lines", station_id, period, skipped)
 
     with engine.begin() as conn:
+        # Archive is the authority for old hours: wipe this station's version and
+        # reload, so a re-ingest of corrected history can't leave orphan rows.
+        # latest-months only touches recent hours, so it upserts (on-conflict) to
+        # patch them in without disturbing the archived past.
         if period == "corrected-archive":
             conn.execute(
                 delete(CloudHourly).where(
@@ -319,6 +328,9 @@ def ingest_all_active(
         status = "failed"
         detail = f"at station {results[-1].station_id if results else '?'}: {exc}"
         raise
+    # Close out the IngestRun no matter what: a failed backfill records
+    # status="failed" and the station it died on, so the run table stays an
+    # honest audit trail rather than leaking a perpetual "running" row.
     finally:
         with Session(engine) as session:
             finished = session.get(IngestRun, run.id)

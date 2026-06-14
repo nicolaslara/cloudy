@@ -1,3 +1,9 @@
+"""Structured JSON logging to stdout.
+
+One line of JSON per record so a container log collector can parse fields without
+regex; stdout (not a file) is the 12-factor expectation for a containerized app.
+"""
+
 import json
 import logging
 import sys
@@ -21,5 +27,7 @@ def configure_logging(level: str) -> None:
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JsonFormatter())
     root = logging.getLogger()
+    # Replace, don't append: every entry point calls this, so resetting handlers
+    # keeps re-init (tests, uvicorn reload) from stacking duplicate log lines.
     root.handlers = [handler]
     root.setLevel(level.upper())

@@ -1,4 +1,4 @@
-"""Contract tests for GET /api/v1/lightning with the SQL seam monkeypatched."""
+"""Contract tests for GET /api/v1/exploration/lightning with the SQL seam monkeypatched."""
 
 from collections.abc import Iterator
 from datetime import UTC, date, datetime
@@ -10,9 +10,10 @@ from sqlalchemy import Engine
 
 from cloudy.api import create_app
 from cloudy.core import cache as cache_module
-from cloudy.core import lightning_read, lightning_series
-from cloudy.core.lightning_query import SpatialBounds
+from cloudy.core.spatial import SpatialBounds
 from cloudy.db import session as db_session
+from cloudy.exploration import lightning_read, lightning_series
+from cloudy.exploration.lightning_query import spatial_meta
 
 SERIES = [
     {
@@ -61,7 +62,7 @@ def client(spy: QuerySpy) -> TestClient:
 
 
 def test_series_defaults_without_location(client: TestClient, spy: QuerySpy) -> None:
-    response = client.get("/api/v1/lightning", params={"format": "series"})
+    response = client.get("/api/v1/exploration/lightning", params={"format": "series"})
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["format"] == "series"
@@ -74,7 +75,7 @@ def test_series_defaults_without_location(client: TestClient, spy: QuerySpy) -> 
 
 def test_series_with_radius_filter(client: TestClient, spy: QuerySpy) -> None:
     response = client.get(
-        "/api/v1/lightning",
+        "/api/v1/exploration/lightning",
         params={"format": "series", "lat": 59.33, "lon": 18.06, "radius_km": 10},
     )
     assert response.status_code == 200, response.text
@@ -85,7 +86,7 @@ def test_series_with_radius_filter(client: TestClient, spy: QuerySpy) -> None:
 
 def test_explicit_params_are_passed_through(client: TestClient, spy: QuerySpy) -> None:
     response = client.get(
-        "/api/v1/lightning",
+        "/api/v1/exploration/lightning",
         params={
             "format": "series",
             "lat": 59.33,
@@ -118,7 +119,7 @@ def test_explicit_params_are_passed_through(client: TestClient, spy: QuerySpy) -
     ],
 )
 def test_invalid_params_are_422(client: TestClient, spy: QuerySpy, params: dict[str, Any]) -> None:
-    assert client.get("/api/v1/lightning", params=params).status_code == 422
+    assert client.get("/api/v1/exploration/lightning", params=params).status_code == 422
     assert spy.calls == []
 
 
@@ -138,7 +139,7 @@ def test_unsafe_manual_aggregation_rejects_before_count(
     monkeypatch.setattr(db_session, "get_engine", lambda: object())
 
     response = TestClient(create_app()).get(
-        "/api/v1/lightning",
+        "/api/v1/exploration/lightning",
         params={
             "format": "series",
             "from": "2015-01-01",
@@ -181,11 +182,11 @@ def test_strokes_format_uses_events_reader(
 
     def fake_execute(engine: Engine, query: Any) -> dict[str, Any]:
         assert query.format == "strokes"
-        return {**events_body, "spatial": query.spatial().as_meta()}
+        return {**events_body, "spatial": spatial_meta(query.spatial())}
 
     monkeypatch.setattr(lightning_read, "execute", fake_execute)
     response = client.get(
-        "/api/v1/lightning",
+        "/api/v1/exploration/lightning",
         params={"format": "strokes", "from": "2018-07-25", "to": "2018-07-25", "limit": 5},
     )
     assert response.status_code == 200, response.text
@@ -197,8 +198,8 @@ def test_strokes_format_uses_events_reader(
 
 def test_second_identical_call_is_served_from_cache(client: TestClient, spy: QuerySpy) -> None:
     params = {"format": "series", "lat": 59.33, "lon": 18.06, "to": "2026-01-01"}
-    first = client.get("/api/v1/lightning", params=params)
-    second = client.get("/api/v1/lightning", params=params)
+    first = client.get("/api/v1/exploration/lightning", params=params)
+    second = client.get("/api/v1/exploration/lightning", params=params)
     assert first.status_code == second.status_code == 200
     assert second.json() == first.json()
     assert len(spy.calls) == 1

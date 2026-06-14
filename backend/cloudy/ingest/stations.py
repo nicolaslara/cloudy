@@ -65,3 +65,24 @@ def nearest_active(session: Session, lat: float, lon: float) -> tuple[Station, f
         raise LookupError("no stations ingested — run: cloudy ingest stations")
     best = min(stations, key=lambda s: haversine_km(lat, lon, s.lat, s.lon))
     return best, haversine_km(lat, lon, best.lat, best.lon)
+
+
+def active_within_radius(
+    session: Session, lat: float, lon: float, radius_km: float
+) -> list[tuple[Station, float]]:
+    """Active stations within `radius_km`, nearest first (each with its distance).
+
+    The cloud distance filter pools these into one area normal. Stations are
+    sparse (~30 km apart), so a small radius can return nothing — the caller falls
+    back to the single nearest so the chart is never empty. Same plain-Python
+    haversine as nearest_active; ~100 rows makes a query needless.
+    """
+    from cloudy.core.geo import haversine_km
+
+    stations = session.exec(select(Station).where(Station.active)).all()
+    if not stations:
+        raise LookupError("no stations ingested — run: cloudy ingest stations")
+    within = [
+        (s, dist) for s in stations if (dist := haversine_km(lat, lon, s.lat, s.lon)) <= radius_km
+    ]
+    return sorted(within, key=lambda pair: pair[1])

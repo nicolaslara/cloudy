@@ -7,6 +7,12 @@ type QueryRejection = {
   };
 };
 
+/**
+ * Surface the backend's "query too large" guidance to the user. The API rejects
+ * over-broad queries with a 413 carrying a coarser-aggregation suggestion; any
+ * other error stays generic (the caller's fallback). The 413 shape is the only
+ * contract we lean on here.
+ */
 export function queryErrorMessage(error: Error | null, fallback: string): string {
   if (!(error instanceof ApiError) || error.status !== 413) return fallback;
   const rejection = error.detail as QueryRejection | undefined;

@@ -30,7 +30,7 @@ async function mockAppApis(page: Page, onLightningRequest?: (url: URL) => void) 
       body: JSON.stringify(STATION),
     }),
   );
-  await page.route("**/api/v1/cloud?**", (route) => {
+  await page.route("**/api/v1/exploration/cloud?**", (route) => {
     const url = new URL(route.request().url());
     return route.fulfill({
       status: 200,
@@ -38,7 +38,7 @@ async function mockAppApis(page: Page, onLightningRequest?: (url: URL) => void) 
       body: JSON.stringify(url.searchParams.has("lat") ? CLOUD : SWEDEN_CLOUD),
     });
   });
-  await page.route("**/api/v1/lightning?**", (route) => {
+  await page.route("**/api/v1/exploration/lightning?**", (route) => {
     const url = new URL(route.request().url());
     onLightningRequest?.(url);
     if (url.searchParams.get("format") === "strokes") return route.continue();
@@ -124,6 +124,12 @@ async function chartCanvas(page: Page) {
   return page.locator(".chart-canvas");
 }
 
+// Normals is the default landing now; the chart explorer lives in the Lab. These
+// specs exercise the explorer, so they step into it first.
+async function openExploration(page: Page) {
+  await page.getByRole("button", { name: "Exploration" }).click();
+}
+
 async function readTimeSliderDays(page: Page) {
   return page.evaluate(() => {
     const chart = (window as Window & {
@@ -152,6 +158,7 @@ async function readTimeSliderDays(page: Page) {
 test("?latlng= opens a location without searching", async ({ page }) => {
   await mockAppApis(page);
   await page.goto("/app/?latlng=59.33,18.06");
+  await openExploration(page);
 
   await expect(page.getByRole("heading", { name: "59.330°, 18.060°" })).toBeVisible();
   await expect(page.getByText("Source: SMHI")).toBeVisible();
@@ -162,6 +169,7 @@ test("?latlng= opens a location without searching", async ({ page }) => {
 test("?location= geocodes on load", async ({ page }) => {
   await mockAppApis(page);
   await page.goto("/app/?location=Stockholm");
+  await openExploration(page);
 
   await expect(page.getByRole("heading", { name: STOCKHOLM.label })).toBeVisible();
   await expect(page.getByText("Source: SMHI")).toBeVisible();
@@ -172,6 +180,7 @@ test("?location= geocodes on load", async ({ page }) => {
 test("both location= and latlng= are ignored", async ({ page }) => {
   await mockAppApis(page);
   await page.goto("/app/?latlng=59.33,18.06&location=Stockholm");
+  await openExploration(page);
 
   await expect(page.getByRole("heading", { name: STOCKHOLM.label })).toHaveCount(0);
   await expect(page.getByText(/showing sweden-wide totals/i)).toBeVisible();
@@ -180,6 +189,7 @@ test("both location= and latlng= are ignored", async ({ page }) => {
 test("explore view renders Sweden-wide without searching", async ({ page }) => {
   await mockAppApis(page);
   await page.goto("/app/");
+  await openExploration(page);
 
   await expect(page.getByText(/showing sweden-wide totals/i)).toBeVisible();
   await expect(page.getByText(/sweden-wide station aggregate/i)).toBeVisible();
@@ -190,6 +200,7 @@ test("explore view renders Sweden-wide without searching", async ({ page }) => {
 test("lightning chart renders and survives strike scale toggles", async ({ page }) => {
   await mockAppApis(page);
   await page.goto("/app/");
+  await openExploration(page);
   await selectStockholm(page);
 
   const canvas = await chartCanvas(page);
@@ -213,6 +224,7 @@ test("weekly aggregation opens with a zoom window and keeps it across scale chan
 }) => {
   await mockAppApis(page);
   await page.goto("/app/");
+  await openExploration(page);
   await selectStockholm(page);
 
   await clickAggregation(page, "week");
@@ -233,6 +245,7 @@ test("chart UI only emits safe aggregation requests", async ({ page }) => {
     }
   });
   await page.goto("/app/");
+  await openExploration(page);
   await expect(page.getByText("Source: SMHI")).toBeVisible();
 
   await clickAggregation(page, "week");
@@ -253,6 +266,7 @@ test("visible range narrows the auto chart request", async ({ page }) => {
     if (url.searchParams.get("format") === "series") requests.push(url);
   });
   await page.goto("/app/");
+  await openExploration(page);
   await expect(page.getByText("Source: SMHI")).toBeVisible();
 
   await page
@@ -275,6 +289,7 @@ test("visible range narrows the auto chart request", async ({ page }) => {
 test("radius toggle preserves the time slider window on week view", async ({ page }) => {
   await mockAppApis(page);
   await page.goto("/app/");
+  await openExploration(page);
   await selectStockholm(page);
 
   await clickAggregation(page, "week");
@@ -314,7 +329,7 @@ async function clickAggregation(page: Page, aggregation: "auto" | "week" | "mont
     page
       .waitForResponse(
         (response) =>
-          response.url().includes("/api/v1/lightning") &&
+          response.url().includes("/api/v1/exploration/lightning") &&
           response.url().includes(`aggregation=${aggregation}`) &&
           response.ok(),
         { timeout: 5000 },
@@ -328,6 +343,7 @@ async function clickAggregation(page: Page, aggregation: "auto" | "week" | "mont
 test("location change preserves the time slider window", async ({ page }) => {
   await mockAppApis(page);
   await page.goto("/app/?latlng=59.33,18.06");
+  await openExploration(page);
   await expect(page.getByText("Source: SMHI")).toBeVisible();
 
   const readSliderDays = () => readTimeSliderDays(page);
@@ -357,6 +373,7 @@ test("location change preserves the time slider window", async ({ page }) => {
 test("aggregation toggle preserves the time slider window", async ({ page }) => {
   await mockAppApis(page);
   await page.goto("/app/?latlng=59.33,18.06");
+  await openExploration(page);
   await expect(page.getByText("Source: SMHI")).toBeVisible();
 
   // Establish week view with the visible window synced (first switch can lag).
@@ -375,6 +392,7 @@ test("aggregation toggle preserves the time slider window", async ({ page }) => 
 test("switching to map keeps the shared time slider", async ({ page }) => {
   await mockAppApis(page);
   await page.goto("/app/?latlng=59.33,18.06");
+  await openExploration(page);
   await expect(page.getByText("Source: SMHI")).toBeVisible();
   await expect(page.locator(".chart-canvas")).toBeVisible();
   await expect(page.locator(".time-range-picker-canvas")).toBeVisible();

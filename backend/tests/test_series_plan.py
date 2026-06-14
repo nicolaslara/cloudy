@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from cloudy.core.series_plan import (
+from cloudy.exploration.series_plan import (
     MAX_RAW_LIGHTNING_EVENTS,
     QueryRejected,
     bucket_count,
