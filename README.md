@@ -54,7 +54,7 @@ make dev-backend           # FastAPI on http://localhost:8400
 make dev-frontend          # (second terminal) Vite on http://localhost:5273
 ```
 
-Open http://localhost:5273/app/ — the page calls the API through the Vite dev proxy.
+Open http://localhost:5273/app//app/ — the page calls the API through the Vite dev proxy.
 API docs (when `API_DOCS=true`, the default): http://localhost:8400/docs
 Health check directly: `curl http://localhost:8400/api/v1/health` (reports DB
 status; degrades, never crashes, when Postgres is down).

@@ -1,11 +1,48 @@
 :root {
-  font-family: system-ui, sans-serif;
-  color: #1f2933;
-  background: #f0f4f8;
+  /* Shared palette with the landing deck at / — paper, ink, and the accent family —
+     so the app reads as the same product as the story. */
+  --paper: #f7f4ee;
+  --ink: #202326;
+  --muted: #5b6166;
+  --faint: #a89e8c;
+  --line: #d9d2c4;
+  --panel: #fffdf8;
+  --hover: #ebe0ca;
+  --cyan: #00818a;
+  --blue: #285f9f;
+  --amber: #b76a10;
+  --red: #b54535;
+  --green: #237a4b;
+  --shadow: 0 14px 36px rgba(35, 31, 24, 0.08);
+  color: var(--ink);
+  /* Serif body, like the deck — the editorial voice. */
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
 }
 
 body {
   margin: 0;
+  /* The deck's faint engineering grid on paper. */
+  background:
+    linear-gradient(90deg, rgba(32, 35, 38, 0.035) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(rgba(32, 35, 38, 0.025) 1px, transparent 1px) 0 0 / 28px 28px,
+    var(--paper);
+}
+
+/* Bold sans headings against the serif body — the deck's pairing. */
+h1, h2, h3, h4 {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* Chrome — controls, tables, the nav rail — stays sans for crisp UI and numerals;
+   prose keeps the serif body. */
+button, input, select, table, .view-rail, .segmented-label {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+a {
+  color: var(--blue);
 }
 
 .app {
@@ -16,8 +53,8 @@ body {
 
 .app-header {
   padding: 1.25rem 1.25rem 0.75rem;
-  border-bottom: 1px solid #d3dce6;
-  background: #fff;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
 }
 
 .app-brand h1 {
@@ -51,8 +88,9 @@ body {
   flex-direction: column;
   gap: 0.35rem;
   padding: 1rem 0.75rem;
-  border-right: 1px solid #d3dce6;
-  background: #f8fafc;
+  border-right: 1px solid var(--line);
+  /* Cream sidebar, distinct from the hover tint so the hover reads. */
+  background: var(--panel);
 }
 
 .view-rail button {
@@ -64,19 +102,22 @@ body {
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
-  color: #52606d;
+  color: var(--muted);
   font-size: 0.92rem;
   text-align: left;
   cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
 }
 
-.view-rail button:hover:not(:disabled) {
-  background: #eef2f6;
+.view-rail button:hover:not(:disabled):not(.active) {
+  background: var(--hover);
+  color: var(--ink);
 }
 
 .view-rail button.active {
-  background: #1d4f91;
-  color: #fff;
+  background: var(--ink);
+  color: var(--panel);
+  box-shadow: 2px 2px 0 var(--cyan);
 }
 
 .view-rail button:disabled {
@@ -90,11 +131,11 @@ body {
 .view-rail-group {
   margin: 0.6rem 0 0.1rem;
   padding-top: 0.6rem;
-  border-top: 1px solid #d3dce6;
+  border-top: 1px solid var(--line);
   font-size: 0.66rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #9aa5b1;
+  color: var(--faint);
 }
 
 .view-soon {
@@ -114,7 +155,7 @@ body {
 
 .workspace-hint {
   margin: 2rem 0;
-  color: #52606d;
+  color: var(--muted);
 }
 
 /* Search stays readable-width in the header. */
@@ -128,15 +169,15 @@ h1 {
 
 .tagline {
   margin-top: 0;
-  color: #52606d;
+  color: var(--muted);
 }
 
 .card {
   margin-top: 2rem;
   padding: 1rem 1.25rem;
-  border: 1px solid #d3dce6;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--panel);
 }
 
 .card h2 {
@@ -145,22 +186,22 @@ h1 {
 }
 
 .card-ok {
-  border-color: #2f9e44;
+  border-color: var(--green);
 }
 
 .card-degraded {
-  border-color: #e8930c;
+  border-color: var(--amber);
 }
 
 .card-unreachable {
-  border-color: #d6336c;
+  border-color: var(--red);
 }
 
 .search input {
   width: 100%;
   padding: 0.65rem 0.9rem;
   font-size: 1rem;
-  border: 1px solid #d3dce6;
+  border: 1px solid var(--line);
   border-radius: 8px;
   box-sizing: border-box;
 }
@@ -169,9 +210,9 @@ h1 {
   list-style: none;
   margin: 0.25rem 0 0;
   padding: 0;
-  border: 1px solid #d3dce6;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--panel);
   overflow: hidden;
 }
 
@@ -187,50 +228,31 @@ h1 {
 }
 
 .suggestions button:hover {
-  background: #f1f5f9;
+  background: var(--hover);
 }
 
 .search-note {
   margin: 0.5rem 0 0;
-  color: #9a6700;
+  color: var(--amber);
   font-size: 0.9rem;
 }
 
 .muted {
-  color: #52606d;
+  color: var(--muted);
   margin: 0.15rem 0;
   font-size: 0.9rem;
 }
 
-.footer {
-  margin-top: 3rem;
-  color: #9aa5b1;
-  font-size: 0.8rem;
-}
-
-.dot {
-  display: inline-block;
-  width: 0.6rem;
-  height: 0.6rem;
-  border-radius: 50%;
-  margin-right: 0.4rem;
-  background: #9aa5b1;
-}
-
-.dot-ok { background: #2f9e44; }
-.dot-degraded { background: #e8930c; }
-.dot-unreachable { background: #d6336c; }
-
 .suggestions button.highlighted {
-  background: #e2e8f0;
+  background: var(--line);
 }
 
 .chart-card {
   margin-top: 1rem;
   padding: 1rem 1.25rem;
-  border: 1px solid #d3dce6;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--panel);
 }
 
 .chart-controls {
@@ -252,12 +274,12 @@ h1 {
   font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: #7b8794;
+  color: var(--muted);
 }
 
 .segmented {
   display: inline-flex;
-  border: 1px solid #d3dce6;
+  border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -265,24 +287,29 @@ h1 {
 .segmented button {
   padding: 0.35rem 0.8rem;
   border: 0;
-  background: #fff;
+  background: var(--panel);
   font-size: 0.9rem;
   cursor: pointer;
-  color: #52606d;
+  color: var(--muted);
 }
 
 .segmented button + button {
-  border-left: 1px solid #d3dce6;
+  border-left: 1px solid var(--line);
+}
+
+.segmented button:hover:not(.active) {
+  background: var(--hover);
+  color: var(--ink);
 }
 
 .segmented button.active {
-  background: #1d4f91;
-  color: #fff;
+  background: var(--ink);
+  color: var(--panel);
 }
 
 .chart-note {
   margin: 0 0 0.5rem;
-  color: #52606d;
+  color: var(--muted);
   font-size: 0.85rem;
 }
 
@@ -305,18 +332,18 @@ h1 {
   align-items: center;
   justify-content: center;
   margin: 0;
-  color: #52606d;
+  color: var(--muted);
   font-size: 0.95rem;
-  background: #fff;
+  background: var(--panel);
 }
 
 .chart-error {
-  color: #d6336c;
+  color: var(--red);
 }
 
 .chart-attribution {
   margin: 0.5rem 0 0;
-  color: #9aa5b1;
+  color: var(--faint);
   font-size: 0.75rem;
 }
 
@@ -328,9 +355,9 @@ h1 {
   min-height: 0;
   margin-top: 1rem;
   padding: 1rem 1.25rem;
-  border: 1px solid #d3dce6;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--panel);
 }
 
 .lightning-explorer-map {
@@ -351,7 +378,7 @@ h1 {
 }
 
 .map-filter-note {
-  color: #52606d;
+  color: var(--muted);
   font-size: 0.85rem;
 }
 
@@ -359,7 +386,7 @@ h1 {
   position: relative;
   flex: 1 1 auto;
   min-height: 320px;
-  border: 1px solid #d3dce6;
+  border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
   background: #0f141c;
@@ -388,9 +415,9 @@ h1 {
 
 .time-range-picker {
   flex: 0 0 auto;
-  border: 1px solid #d3dce6;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--panel);
   padding: 0.55rem 0.75rem 0.35rem;
 }
 
@@ -400,13 +427,13 @@ h1 {
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
-  color: #52606d;
+  color: var(--muted);
   font-size: 0.8rem;
   margin-bottom: 0.2rem;
 }
 
 .time-range-picker-label {
-  color: #1f2933;
+  color: var(--ink);
   font-size: 0.82rem;
 }
 
@@ -432,8 +459,259 @@ h1 {
   margin: 0;
 }
 
+/* When the cloud panel shows two pills (Source + Model/Distance) they share one
+   head; this keeps them grouped on the right with the same gap the head uses. */
+.normals-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .normals-source {
   margin: 0.25rem 0 0.5rem;
-  color: #6b7280;
+  color: var(--muted);
   font-size: 0.85rem;
+}
+
+/* Predictions view — reuses the normals shell (.normals-view, .normals-panel,
+   .normals-panel-head, .normals-source, .normals-attribution) and adds only the
+   scorecard-specific styles so the two views stay visually consistent. */
+.predictions-intro {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.predictions-month-subtitle {
+  font-size: 0.85em;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* The backtest scorecard sits below the forecast chart and answers "how much
+   should you trust this?": skill vs climatology per lead, fitted alpha, n_origins.
+   Cards sit in a row (one per lead) so lead-1 and lead-2 read side by side. */
+.predictions-scorecard {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--hover);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.predictions-scorecard-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.predictions-scorecard-metric {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.predictions-scorecard-note {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  color: var(--amber);
+}
+
+.predictions-scorecard-leads {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.predictions-scorecard-card {
+  flex: 1 1 160px;
+  min-width: 140px;
+}
+
+.predictions-scorecard-lead-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--faint);
+  margin-bottom: 0.2rem;
+}
+
+/* The skill score is the emotional headline: green when the model beats
+   climatology, red (or at least visible) when it doesn't. */
+.predictions-scorecard-skill {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 0.1rem;
+}
+
+.skill-positive { color: var(--green); }
+.skill-negative { color: var(--red); }
+
+.predictions-scorecard-skill-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+.predictions-scorecard-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.predictions-scorecard-stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.stat-name {
+  color: var(--muted);
+}
+
+.stat-value {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The cloud progression table on the Predictions view: rows are the two ways to
+   estimate a point's normal (nearest → kNN), columns are the seasonal normal and that
+   normal nudged by damped persistence. Tabular numerals so the percentages line up as
+   a ladder the eye can read down. */
+.predictions-progression {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 30rem;
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
+}
+
+.predictions-progression th,
+.predictions-progression td {
+  padding: 0.35rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.predictions-progression thead th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+  font-weight: 600;
+}
+
+.predictions-progression tbody th {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.predictions-progression td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+/* Model pages (e.g. Damped persistence): readable prose column + a compact
+   histogram (the shared .chart-area is sized for the big full-height charts, so
+   the histogram overrides it to a modest height). */
+.method-prose {
+  max-width: 46rem;
+  color: var(--ink);
+}
+
+.method-prose-aside {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.method-histogram {
+  height: 320px;
+  max-width: 46rem;
+}
+
+/* The forecast-vs-actual backtest line. Wider than the histogram (it's a long time
+   series) and a touch taller so the three lines separate cleanly. */
+.method-backtest {
+  height: 340px;
+}
+
+/* The leaderboard: a compact comparison of every model on the same backtest. The
+   current page's row is tinted so "you are here" reads at a glance. */
+.model-leaderboard {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 46rem;
+  font-size: 0.92rem;
+}
+
+.model-leaderboard caption {
+  text-align: left;
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding-bottom: 0.5rem;
+}
+
+.model-leaderboard th,
+.model-leaderboard td {
+  text-align: right;
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.model-leaderboard thead th,
+.model-leaderboard tbody th {
+  text-align: left;
+}
+
+.model-leaderboard thead th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.model-leaderboard tr.active {
+  background: var(--hover);
+}
+
+.model-leaderboard tr.active th {
+  color: var(--blue);
+}
+
+/* --- Deck accents: cream cards lifted off the paper, and the active nav tab as a
+   hard-offset chip in the deck's cyan, so the app and the story share a look. --- */
+.card,
+.chart-card,
+.lightning-explorer,
+.time-range-picker,
+.predictions-scorecard,
+.suggestions {
+  box-shadow: var(--shadow);
+}
+
+/* The live "Current month vs normal" aside, sitting under each chart: a small
+   themed panel with a cyan accent edge, like the deck's asides. */
+.normals-callout {
+  margin: 0.85rem 0 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--cyan);
+  border-radius: 0 8px 8px 0;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.normals-callout h3 {
+  margin: 0 0 0.25rem;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.normals-callout p {
+  margin: 0;
 }

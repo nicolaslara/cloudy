@@ -3,6 +3,10 @@
 // the UI can branch on — react-query treats a thrown ApiError as the query
 // error, and apiErrorMessage maps its status to user-facing copy.
 
+function apiUrl(path: string): string {
+  return path;
+}
+
 // Carries the HTTP status alongside the message so callers can distinguish
 // "bad input" (4xx) from "backend down" (5xx) without re-parsing the message,
 // and keeps the parsed JSON body (when there is one) in `detail` for context.
@@ -19,7 +23,7 @@ export class ApiError extends Error {
 }
 
 export async function getJson<T>(path: string): Promise<T> {
-  const res = await fetch(path, { headers: { Accept: "application/json" } });
+  const res = await fetch(apiUrl(path), { headers: { Accept: "application/json" } });
   if (!res.ok) {
     throw new ApiError(res.status, `GET ${path} returned ${res.status}`, await errorDetail(res));
   }
@@ -27,7 +31,7 @@ export async function getJson<T>(path: string): Promise<T> {
 }
 
 export async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(path, {
+  const res = await fetch(apiUrl(path), {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     body: JSON.stringify(body),

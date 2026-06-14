@@ -1,4 +1,5 @@
 import { useChart } from "../../lib/useChart";
+import type { CloudComparisonOption } from "./cloudComparisonOption";
 import type { CloudNormalsOption } from "./cloudNormalsOption";
 import type { LightningNormalsOption } from "./lightningNormalsOption";
 
@@ -14,7 +15,7 @@ export function NormalsChart({
   empty,
   emptyMessage,
 }: {
-  option: CloudNormalsOption | LightningNormalsOption | null;
+  option: CloudNormalsOption | LightningNormalsOption | CloudComparisonOption | null;
   structureKey: string;
   loading: boolean;
   error: Error | null;

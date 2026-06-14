@@ -8,9 +8,11 @@ import type { BarSeriesOption } from "echarts/charts";
 // the split lines are just a reading aid behind the data, so they're nearly
 // invisible. Keeping them here means a single edit re-tunes every chart at once,
 // and stops the three builders from drifting apart over time.
-export const AXIS_LABEL = "#52606d"; // darkest — labels carry the numbers/dates
-export const AXIS_LINE = "#9aa5b1"; // lighter — structural, not the focus
-export const SPLIT_LINE = "#eef2f6"; // faint — gridlines sit behind the data
+// Warm-toned to sit on the paper/cream panels (matching the landing deck), not the
+// old cool grays.
+export const AXIS_LABEL = "#5b6166"; // darkest — labels carry the numbers/dates
+export const AXIS_LINE = "#c9bfa8"; // lighter — structural, not the focus
+export const SPLIT_LINE = "#e8e1d2"; // faint — gridlines sit behind the data
 
 // Discharge bars. Blue is the full population of strikes; warm amber is the
 // cloud-to-ground subset, which is the dangerous one and so gets the attention
@@ -28,6 +30,12 @@ export const CG_BOTTOM = "#f6c161";
 export const CLOUD_LINE = "#5b76c9";
 export const CLOUD_AREA_SOLO = "rgba(91, 118, 201, 0.18)";
 export const CLOUD_AREA_OVERLAY = "rgba(91, 118, 201, 0.12)";
+
+// The kNN-average overlay (the equal-weight mean of the nearest stations' observed
+// normals) needs its own hue, distinct from the blue nearest-station bars so the two
+// read apart at a glance. A muted teal-green sits clearly against the blue without
+// clashing.
+export const CLOUD_LINE_KNN = "#2f9e8f";
 
 /**
  * A vertical top→bottom fill for a bar. The gradient is the chart's main bit of

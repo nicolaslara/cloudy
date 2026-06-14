@@ -5,6 +5,8 @@ import { useElementWidth } from "../../lib/useElementWidth";
 import {
   useCloudNormals,
   useLightningNormals,
+  useSpatialNormal,
+  type CloudModel,
   type CloudRadiusKm,
   type NormalsPeriod,
   type RadiusKm,
@@ -12,6 +14,8 @@ import {
 import { cloudNormalsOption } from "./cloudNormalsOption";
 import { lightningNormalsOption } from "./lightningNormalsOption";
 import { NormalsChart } from "./NormalsChart";
+import { CLOUD_LINE_KNN } from "../../lib/chartStyles";
+import { CLOUD_MODEL_LABELS, spatialMonthlyMeans } from "./spatialMonthly";
 import {
   CloudCurrentMonthCallout,
   LightningCurrentMonthCallout,
@@ -26,6 +30,13 @@ const PERIOD: NormalsPeriod = "month";
 // a region. Each control lives next to the chart it filters.
 const LIGHTNING_RADII: RadiusKm[] = [10, 25];
 const CLOUD_RADII: CloudRadiusKm[] = [50, 100];
+
+// The point estimator overlaid on the station-normal bars: the kNN average, with its
+// own line colour. The bars themselves are the "Nearest station" rung, so they aren't
+// repeated as a line; the two read as one toggleable set in the legend.
+const OVERLAY_MODELS: { model: CloudModel; color: string }[] = [
+  { model: "knn", color: CLOUD_LINE_KNN },
+];
 
 /**
  * The Normals feature: the typical year for a place — or all of Sweden when no
@@ -44,14 +55,41 @@ export function NormalsView({ selected }: { selected: Candidate | null }) {
 
   const cloud = useCloudNormals(lat, lon, cloudRadiusKm, PERIOD);
   const lightning = useLightningNormals(lat, lon, lightningRadiusKm, PERIOD);
+  // The kNN estimate overlaid on the station bars, fetched once a place is selected.
+  // The station-normal bars are the "nearest station" rung, so we only need the kNN
+  // curve on top.
+  const knnEstimate = useSpatialNormal(lat, lon, "knn", selected != null);
 
+  // Fold the estimator's weekly curve to monthly and align it to the station bars'
+  // months, so both sit on one axis. The curve drops out until its data lands (so the
+  // bars render immediately and the line fills in), or if it has no answer here.
+  const overlays = useMemo(() => {
+    if (!cloud.data) return [];
+    const periods = cloud.data.series.map((point) => point.period);
+    const build = (result: typeof knnEstimate, model: CloudModel, color: string) => {
+      if (!result.data || result.data.series.length === 0) return null;
+      const monthly = spatialMonthlyMeans(result.data.series);
+      return {
+        name: CLOUD_MODEL_LABELS[model],
+        color,
+        monthly: periods.map((p) => monthly.get(p) ?? null),
+      };
+    };
+    return OVERLAY_MODELS.map(({ model, color }) => build(knnEstimate, model, color)).filter(
+      (curve): curve is NonNullable<typeof curve> => curve != null,
+    );
+  }, [cloud.data, knnEstimate]);
+
+  // One cloud chart: the station-normal bars with the kNN estimate overlaid as a
+  // toggleable line (legend in the chart). No location → plain bars, no overlay.
   const cloudOption = useMemo(
     () =>
       cloud.data && cloud.data.series.length > 0
-        ? cloudNormalsOption(cloud.data.series, PERIOD)
+        ? cloudNormalsOption(cloud.data.series, PERIOD, overlays)
         : null,
-    [cloud.data],
+    [cloud.data, overlays],
   );
+
   const lightningOption = useMemo(
     () =>
       lightning.data && lightning.data.series.length > 0
@@ -64,21 +102,21 @@ export function NormalsView({ selected }: { selected: Candidate | null }) {
   // change, not a structural rebuild.
   const scopeKey = selected ? "location" : "sweden";
 
-  // The cloud source line is honest about how the radius resolved: a regional pool
-  // when several stations are in range, the lone nearest (possibly beyond the
-  // radius) when the network is too sparse to find any.
+  // The cloud source line reports how the station bars resolved: a regional pool when
+  // several stations are in range, the lone nearest (possibly beyond the radius) when
+  // the network is too sparse, or the nationwide average with no location.
   const station = cloud.data?.station;
   const stationCount = cloud.data?.station_count ?? 0;
-  let cloudSource: string | null = null;
+  let sourceNote: string | null = null;
   if (!selected) {
-    cloudSource = stationCount ? `Averaged across ${stationCount} stations nationwide` : null;
+    sourceNote = stationCount ? `Averaged across ${stationCount} stations nationwide` : null;
   } else if (station) {
     if (stationCount > 1) {
-      cloudSource = `Averaged across ${stationCount} stations within ${cloudRadiusKm} km`;
+      sourceNote = `Averaged across ${stationCount} stations within ${cloudRadiusKm} km`;
     } else if (station.distance_km > cloudRadiusKm) {
-      cloudSource = `Nearest station: ${station.name} (${Math.round(station.distance_km)} km — none within ${cloudRadiusKm} km)`;
+      sourceNote = `Nearest station: ${station.name} (${Math.round(station.distance_km)} km — none within ${cloudRadiusKm} km)`;
     } else {
-      cloudSource = `Station: ${station.name} (${Math.round(station.distance_km)} km)`;
+      sourceNote = `Station: ${station.name} (${Math.round(station.distance_km)} km)`;
     }
   }
 
@@ -92,16 +130,26 @@ export function NormalsView({ selected }: { selected: Candidate | null }) {
         <div className="normals-panel-head">
           <h3>Normal cloud cover</h3>
           {selected && (
-            <Segmented
-              label="Distance"
-              options={CLOUD_RADII}
-              value={cloudRadiusKm}
-              onChange={setCloudRadiusKm}
-              format={(option) => `${option} km`}
-            />
+            <div className="normals-controls">
+              <Segmented
+                label="Distance"
+                options={CLOUD_RADII}
+                value={cloudRadiusKm}
+                onChange={setCloudRadiusKm}
+                format={(option) => `${option} km`}
+              />
+            </div>
           )}
         </div>
-        {cloudSource && <p className="normals-source">{cloudSource}</p>}
+        {sourceNote && <p className="normals-source">{sourceNote}</p>}
+        {selected && (
+          <p className="normals-source">
+            Bars are the nearest-station normal; the line overlays the kNN average — the
+            equal-weight mean of the nearest stations' observed normals — at your exact point. Click
+            a legend entry to toggle a curve.
+            {knnEstimate.isPending && " Estimating at your point…"}
+          </p>
+        )}
         <NormalsChart
           option={cloudOption}
           structureKey={`cloud-${scopeKey}`}

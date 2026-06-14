@@ -1,10 +1,10 @@
 import { Fragment } from "react";
-import { VIEWS, type AppView } from "../lib/views";
+import { GROUP_LABELS, VIEWS, type AppView } from "../lib/views";
 
-// Left-hand view switcher, data-driven from VIEWS. The first "lab" entry gets a
-// small group label so the exploration tools read as a secondary workbench under
-// the Normals headline, not as peers of it. Disabled entries still render — the
-// roadmap stays visible — but aren't clickable until their gate passes.
+// Left-hand view switcher, data-driven from VIEWS. Each labelled group (Models,
+// Lab) gets a small header before its first entry, so models and the exploration
+// workbench read as distinct sections under the ungrouped product tabs. Disabled
+// entries still render — the roadmap stays visible — but aren't clickable.
 export function ViewRail({
   active,
   onChange,
@@ -15,12 +15,12 @@ export function ViewRail({
   return (
     <nav className="view-rail" aria-label="Views">
       {VIEWS.map((view, index) => {
-        const startsLab = view.group === "lab" && VIEWS[index - 1]?.group !== "lab";
+        const startsGroup = view.group != null && view.group !== VIEWS[index - 1]?.group;
         return (
           <Fragment key={view.id}>
-            {startsLab && (
+            {startsGroup && view.group && (
               <p className="view-rail-group" aria-hidden>
-                Lab
+                {GROUP_LABELS[view.group]}
               </p>
             )}
             <button

@@ -123,10 +123,173 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/predictions/backtest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Backtest Route */
+        get: operations["backtest_route_api_v1_predictions_backtest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/predictions/outlook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Outlook Route */
+        get: operations["outlook_route_api_v1_predictions_outlook_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/predictions/lightning-outlook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lightning Outlook Route */
+        get: operations["lightning_outlook_route_api_v1_predictions_lightning_outlook_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/predictions/backtest-series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Backtest Series Route */
+        get: operations["backtest_series_route_api_v1_predictions_backtest_series_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/predictions/spatial": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Spatial Route */
+        get: operations["spatial_route_api_v1_predictions_spatial_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * BacktestArtifact
+         * @description Static cross-station benchmark of the weekly models — computed once.
+         *
+         *     Not live data: `cloudy backtest` runs the weekly rolling-origin backtest for
+         *     every active station, for every model, and writes this; the API only reads it.
+         *     `n_stations` is the station universe evaluated; `models` carries each model's
+         *     per-station skill spread so the UI can histogram one and rank them side by side.
+         */
+        BacktestArtifact: {
+            /** Generated At */
+            generated_at: string;
+            /** N Stations */
+            n_stations: number;
+            models: components["schemas"]["BacktestModels"];
+        };
+        /**
+         * BacktestModels
+         * @description The leaderboard: every weekly model scored on the same stations and harness.
+         *
+         *     One field per model so the comparison is type-safe; a new model adds a field
+         *     here (and its own page). Today: damped persistence.
+         */
+        BacktestModels: {
+            damped: components["schemas"]["ModelScores"];
+        };
+        /**
+         * BacktestSeriesPoint
+         * @description One scored target week of the rolling-origin backtest, for the chart.
+         *
+         *     `week` is the ISO date (Monday) the forecast was *for*; `actual` is what cloud
+         *     cover that week turned out to be; `forecast` is the model's absolute estimate
+         *     (the as-of-origin normal plus its predicted anomaly, clamped 0-100); `normal` is
+         *     the seasonal-normal baseline the model is judged against. The chart draws all
+         *     three so "does the model sit closer to actual than the flat normal does" is visible.
+         */
+        BacktestSeriesPoint: {
+            /** Week */
+            week: string;
+            /** Actual */
+            actual: number;
+            /** Forecast */
+            forecast: number;
+            /** Normal */
+            normal: number;
+        };
+        /**
+         * BacktestSeriesResponse
+         * @description A model's forecast-vs-actual over its rolling-origin backtest at one place.
+         *
+         *     `points` is the per-target-week series (chronological, scored origins only — the
+         *     warm-up and any unscorable weeks are absent). `skill` and `n_origins` are the same
+         *     rolling-origin MAE skill the leaderboard reports, recomputed here so the chart and
+         *     the number can't disagree. `model` says which forward model produced the forecast.
+         */
+        BacktestSeriesResponse: {
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "station" | "sweden";
+            /** Radius Km */
+            radius_km: number;
+            /**
+             * Model
+             * @constant
+             */
+            model: "damped";
+            /** Lead Weeks */
+            lead_weeks: number;
+            /** Skill */
+            skill: number;
+            /** N Origins */
+            n_origins: number;
+            /** Points */
+            points: components["schemas"]["BacktestSeriesPoint"][];
+            meta: components["schemas"]["PredictionsMeta"];
+        };
         /** ClimatologyMeta */
         ClimatologyMeta: {
             /** Sources */
@@ -221,6 +384,34 @@ export interface components {
             observed_count: number;
             /** Year Count */
             year_count: number;
+        };
+        /**
+         * CloudOutlook
+         * @description The near-term cloud outlook: recent gap from normal + the damped forward view.
+         *
+         *     Weekly resolution on purpose — month-to-month anomalies barely persist, but
+         *     weekly ones do, so this is where a simple model genuinely beats the normal.
+         *     `recent_anomaly_pct` is the latest observed week's deviation from its
+         *     week-of-year normal; each lead damps it forward. No chart: the UI states it in
+         *     a sentence.
+         */
+        CloudOutlook: {
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "station" | "sweden";
+            /** Radius Km */
+            radius_km: number;
+            /** Recent Anomaly Pct */
+            recent_anomaly_pct: number | null;
+            /** Recent Cloud Pct */
+            recent_cloud_pct: number | null;
+            /** Weeks Observed */
+            weeks_observed: number;
+            /** Leads */
+            leads: components["schemas"]["OutlookLead"][];
+            meta: components["schemas"]["PredictionsMeta"];
         };
         /** CloudPeriod */
         CloudPeriod: {
@@ -410,6 +601,64 @@ export interface components {
             /** Year Count */
             year_count: number;
         };
+        /**
+         * LightningOutlook
+         * @description The near-term lightning outlook — the same damped model, the sparse cousin.
+         *
+         *     Lightning is counted in **lightning-days per week** (calendar days with at
+         *     least one discharge in the area), so anomalies are strike-days off the
+         *     week-of-year normal rather than percentage points. The series is zero-filled
+         *     across its observed span — a quiet week is a real 0, not a gap — which is what
+         *     lets a winter lull read as "below an already-low normal" instead of vanishing.
+         *
+         *     `as_of_week` is the latest week the series covers (the last week with strikes
+         *     in range): unlike cloud, lightning data can trail the calendar by months out
+         *     of season, so the UI names the date rather than implying "this week". Treat the
+         *     whole statement as indicative — weekly lightning is sparse and bursty.
+         */
+        LightningOutlook: {
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "radius" | "sweden";
+            /** Radius Km */
+            radius_km: number | null;
+            /** Recent Anomaly Days */
+            recent_anomaly_days: number | null;
+            /** Recent Lightning Days */
+            recent_lightning_days: number | null;
+            /** Weeks Observed */
+            weeks_observed: number;
+            /** As Of Week */
+            as_of_week: string | null;
+            /** Leads */
+            leads: components["schemas"]["LightningOutlookLead"][];
+            meta: components["schemas"]["PredictionsMeta"];
+        };
+        /**
+         * LightningOutlookLead
+         * @description One week ahead for lightning, mirroring OutlookLead but in lightning-days.
+         *
+         *     `expected_anomaly_days` is the damped recent anomaly (alpha * recent), in
+         *     lightning-days — strike-days above or below the week-of-year normal. Same
+         *     damped-persistence machinery as cloud; the unit differs because lightning is
+         *     counted, not measured.
+         */
+        LightningOutlookLead: {
+            /** Lead Weeks */
+            lead_weeks: number;
+            /** Alpha */
+            alpha: number;
+            /** Expected Anomaly Days */
+            expected_anomaly_days: number | null;
+            /** Expected Lightning Days */
+            expected_lightning_days: number | null;
+            /** Skill */
+            skill: number;
+            /** N Origins */
+            n_origins: number;
+        };
         /** LightningPeriod */
         LightningPeriod: {
             /** Period */
@@ -466,6 +715,62 @@ export interface components {
             /** Spatial */
             spatial: components["schemas"]["SpatialMetaSweden"] | components["schemas"]["SpatialMetaBbox"] | components["schemas"]["SpatialMetaRadius"];
             meta: components["schemas"]["StrokesResponseMeta"];
+        };
+        /**
+         * ModelScores
+         * @description One model's cross-station backtest result — the spread the UI histograms.
+         *
+         *     `lead1_skills` is each station's lead-1 MAE skill (%) vs climatology; the
+         *     summaries headline it. The spread is the honest answer to "how good is this
+         *     model": most stations positive, a long good tail, some flat. Every model on the
+         *     leaderboard reports this same shape so they're compared apples-to-apples.
+         */
+        ModelScores: {
+            /** Median Skill Pct */
+            median_skill_pct: number;
+            /** Fraction Beating */
+            fraction_beating: number;
+            /** Lead2 Median Skill Pct */
+            lead2_median_skill_pct: number;
+            /** Lead1 Skills */
+            lead1_skills: number[];
+        };
+        /**
+         * OutlookLead
+         * @description One week ahead: how far the model expects to sit off the seasonal normal.
+         *
+         *     `expected_anomaly_pct` is the damped recent anomaly (alpha * recent), in cloud
+         *     percentage points — the "+Y%" the outlook sentence quotes. `expected_cloud_pct`
+         *     is the *absolute* prediction — the target week's seasonal normal plus that anomaly,
+         *     clamped 0-100 — so the UI can say "expect ~68% cloud", not just the gap. `alpha` is
+         *     the fraction of the recent gap expected to carry to this lead (the lag-k weekly
+         *     autocorrelation, fading with lead). `skill` is the weekly rolling-origin MAE skill
+         *     vs climatology at this lead — the honest "is this worth saying".
+         */
+        OutlookLead: {
+            /** Lead Weeks */
+            lead_weeks: number;
+            /** Alpha */
+            alpha: number;
+            /** Expected Anomaly Pct */
+            expected_anomaly_pct: number | null;
+            /** Expected Cloud Pct */
+            expected_cloud_pct: number | null;
+            /** Target Week */
+            target_week: number;
+            /** Skill */
+            skill: number;
+            /** N Origins */
+            n_origins: number;
+        };
+        /** PredictionsMeta */
+        PredictionsMeta: {
+            /** Sources */
+            sources: string[];
+            /** Attribution */
+            attribution: string;
+            /** Generated At */
+            generated_at: string;
         };
         /** SeriesResponseMeta */
         SeriesResponseMeta: {
@@ -531,6 +836,56 @@ export interface components {
             mode: "sweden";
             /** Bbox */
             bbox: number[];
+        };
+        /**
+         * SpatialNormalPoint
+         * @description One week-of-year slot of a point's estimated cloud normal.
+         *
+         *     `week` is the ISO week (1..53); `estimated_cloud_pct` is the served model's mean
+         *     estimate for that week across all the years the point's neighbours cover. This is
+         *     the same week-of-year shape the climatology series carries, so the frontend can
+         *     overlay an estimate curve on the Normals chart without adapting.
+         */
+        SpatialNormalPoint: {
+            /** Week */
+            week: number;
+            /** Estimated Cloud Pct */
+            estimated_cloud_pct: number | null;
+        };
+        /**
+         * SpatialNormalResponse
+         * @description A point's estimated week-of-year cloud normal from the nearby SMHI stations.
+         *
+         *     `model` is a string id ("nearest" | "knn") so the source/model toggle can add more
+         *     spatial estimators later without a shape change. `nearest_station` is the closest
+         *     station and `n_neighbours` how many fed the estimate — the honest provenance for a
+         *     point with no station of its own.
+         */
+        SpatialNormalResponse: {
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /** Model */
+            model: string;
+            nearest_station: components["schemas"]["SpatialStationMeta"];
+            /** N Neighbours */
+            n_neighbours: number;
+            /** Series */
+            series: components["schemas"]["SpatialNormalPoint"][];
+            meta: components["schemas"]["PredictionsMeta"];
+        };
+        /**
+         * SpatialStationMeta
+         * @description The nearest station to the queried point — the anchor the UI names.
+         */
+        SpatialStationMeta: {
+            /** Station Id */
+            station_id: number;
+            /** Name */
+            name: string;
+            /** Distance Km */
+            distance_km: number;
         };
         /** StationResponse */
         StationResponse: {
@@ -808,6 +1163,160 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LightningClimatologyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    backtest_route_api_v1_predictions_backtest_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BacktestArtifact"];
+                };
+            };
+        };
+    };
+    outlook_route_api_v1_predictions_outlook_get: {
+        parameters: {
+            query?: {
+                lat?: number | null;
+                lon?: number | null;
+                radius_km?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudOutlook"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lightning_outlook_route_api_v1_predictions_lightning_outlook_get: {
+        parameters: {
+            query?: {
+                lat?: number | null;
+                lon?: number | null;
+                radius_km?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LightningOutlook"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    backtest_series_route_api_v1_predictions_backtest_series_get: {
+        parameters: {
+            query?: {
+                lat?: number | null;
+                lon?: number | null;
+                radius_km?: number;
+                model?: string;
+                lead?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BacktestSeriesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    spatial_route_api_v1_predictions_spatial_get: {
+        parameters: {
+            query?: {
+                lat?: number | null;
+                lon?: number | null;
+                model?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpatialNormalResponse"];
                 };
             };
             /** @description Validation Error */

@@ -544,7 +544,7 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 25,
+              "default": 50,
               "title": "Radius Km"
             }
           }
@@ -659,10 +659,457 @@
           }
         }
       }
+    },
+    "/api/v1/predictions/backtest": {
+      "get": {
+        "summary": "Backtest Route",
+        "operationId": "backtest_route_api_v1_predictions_backtest_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BacktestArtifact"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/outlook": {
+      "get": {
+        "summary": "Outlook Route",
+        "operationId": "outlook_route_api_v1_predictions_outlook_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lon"
+            }
+          },
+          {
+            "name": "radius_km",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Radius Km"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloudOutlook"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/lightning-outlook": {
+      "get": {
+        "summary": "Lightning Outlook Route",
+        "operationId": "lightning_outlook_route_api_v1_predictions_lightning_outlook_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lon"
+            }
+          },
+          {
+            "name": "radius_km",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 25,
+              "title": "Radius Km"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LightningOutlook"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/backtest-series": {
+      "get": {
+        "summary": "Backtest Series Route",
+        "operationId": "backtest_series_route_api_v1_predictions_backtest_series_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lon"
+            }
+          },
+          {
+            "name": "radius_km",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Radius Km"
+            }
+          },
+          {
+            "name": "model",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "damped",
+              "title": "Model"
+            }
+          },
+          {
+            "name": "lead",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Lead"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BacktestSeriesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/spatial": {
+      "get": {
+        "summary": "Spatial Route",
+        "operationId": "spatial_route_api_v1_predictions_spatial_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lon"
+            }
+          },
+          {
+            "name": "model",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "knn",
+              "title": "Model"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpatialNormalResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "BacktestArtifact": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "n_stations": {
+            "type": "integer",
+            "title": "N Stations"
+          },
+          "models": {
+            "$ref": "#/components/schemas/BacktestModels"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_at",
+          "n_stations",
+          "models"
+        ],
+        "title": "BacktestArtifact",
+        "description": "Static cross-station benchmark of the weekly models \u2014 computed once.\n\nNot live data: `cloudy backtest` runs the weekly rolling-origin backtest for\nevery active station, for every model, and writes this; the API only reads it.\n`n_stations` is the station universe evaluated; `models` carries each model's\nper-station skill spread so the UI can histogram one and rank them side by side."
+      },
+      "BacktestModels": {
+        "properties": {
+          "damped": {
+            "$ref": "#/components/schemas/ModelScores"
+          }
+        },
+        "type": "object",
+        "required": [
+          "damped"
+        ],
+        "title": "BacktestModels",
+        "description": "The leaderboard: every weekly model scored on the same stations and harness.\n\nOne field per model so the comparison is type-safe; a new model adds a field\nhere (and its own page). Today: damped persistence."
+      },
+      "BacktestSeriesPoint": {
+        "properties": {
+          "week": {
+            "type": "string",
+            "title": "Week"
+          },
+          "actual": {
+            "type": "number",
+            "title": "Actual"
+          },
+          "forecast": {
+            "type": "number",
+            "title": "Forecast"
+          },
+          "normal": {
+            "type": "number",
+            "title": "Normal"
+          }
+        },
+        "type": "object",
+        "required": [
+          "week",
+          "actual",
+          "forecast",
+          "normal"
+        ],
+        "title": "BacktestSeriesPoint",
+        "description": "One scored target week of the rolling-origin backtest, for the chart.\n\n`week` is the ISO date (Monday) the forecast was *for*; `actual` is what cloud\ncover that week turned out to be; `forecast` is the model's absolute estimate\n(the as-of-origin normal plus its predicted anomaly, clamped 0-100); `normal` is\nthe seasonal-normal baseline the model is judged against. The chart draws all\nthree so \"does the model sit closer to actual than the flat normal does\" is visible."
+      },
+      "BacktestSeriesResponse": {
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "station",
+              "sweden"
+            ],
+            "title": "Scope"
+          },
+          "radius_km": {
+            "type": "integer",
+            "title": "Radius Km"
+          },
+          "model": {
+            "type": "string",
+            "const": "damped",
+            "title": "Model"
+          },
+          "lead_weeks": {
+            "type": "integer",
+            "title": "Lead Weeks"
+          },
+          "skill": {
+            "type": "number",
+            "title": "Skill"
+          },
+          "n_origins": {
+            "type": "integer",
+            "title": "N Origins"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/BacktestSeriesPoint"
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PredictionsMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scope",
+          "radius_km",
+          "model",
+          "lead_weeks",
+          "skill",
+          "n_origins",
+          "points",
+          "meta"
+        ],
+        "title": "BacktestSeriesResponse",
+        "description": "A model's forecast-vs-actual over its rolling-origin backtest at one place.\n\n`points` is the per-target-week series (chronological, scored origins only \u2014 the\nwarm-up and any unscorable weeks are absent). `skill` and `n_origins` are the same\nrolling-origin MAE skill the leaderboard reports, recomputed here so the chart and\nthe number can't disagree. `model` says which forward model produced the forecast."
+      },
       "ClimatologyMeta": {
         "properties": {
           "sources": {
@@ -957,6 +1404,70 @@
         ],
         "title": "CloudNormalPoint",
         "description": "The typical cloud cover for one recurring slot, with a spread band.\n\nThe percentile triple (p10/p50/p90) is what turns a flat average into an\nhonest expectation: a place can average 60% cloud either by being reliably\ngrey or by swinging between clear and overcast, and only the band shows that.\nCounts are carried so a thin slot can't masquerade as a confident one."
+      },
+      "CloudOutlook": {
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "station",
+              "sweden"
+            ],
+            "title": "Scope"
+          },
+          "radius_km": {
+            "type": "integer",
+            "title": "Radius Km"
+          },
+          "recent_anomaly_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recent Anomaly Pct"
+          },
+          "recent_cloud_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recent Cloud Pct"
+          },
+          "weeks_observed": {
+            "type": "integer",
+            "title": "Weeks Observed"
+          },
+          "leads": {
+            "items": {
+              "$ref": "#/components/schemas/OutlookLead"
+            },
+            "type": "array",
+            "title": "Leads"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PredictionsMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scope",
+          "radius_km",
+          "recent_anomaly_pct",
+          "recent_cloud_pct",
+          "weeks_observed",
+          "leads",
+          "meta"
+        ],
+        "title": "CloudOutlook",
+        "description": "The near-term cloud outlook: recent gap from normal + the damped forward view.\n\nWeekly resolution on purpose \u2014 month-to-month anomalies barely persist, but\nweekly ones do, so this is where a simple model genuinely beats the normal.\n`recent_anomaly_pct` is the latest observed week's deviation from its\nweek-of-year normal; each lead damps it forward. No chart: the UI states it in\na sentence."
       },
       "CloudPeriod": {
         "properties": {
@@ -1520,6 +2031,142 @@
         "title": "LightningNormalPoint",
         "description": "The typical lightning activity for one recurring slot within a radius.\n\n`strike_day_probability` is the headline: the chance that any given day in\nthis slot sees at least one discharge nearby \u2014 the same notion as SMHI's\nthunder-day maps. `expected_lightning_days` is that probability expressed as\ndays-per-occurrence of the slot (e.g. per July), and `mean_count` is the raw\ndischarge volume for callers who want intensity rather than incidence."
       },
+      "LightningOutlook": {
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "radius",
+              "sweden"
+            ],
+            "title": "Scope"
+          },
+          "radius_km": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Radius Km"
+          },
+          "recent_anomaly_days": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recent Anomaly Days"
+          },
+          "recent_lightning_days": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recent Lightning Days"
+          },
+          "weeks_observed": {
+            "type": "integer",
+            "title": "Weeks Observed"
+          },
+          "as_of_week": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of Week"
+          },
+          "leads": {
+            "items": {
+              "$ref": "#/components/schemas/LightningOutlookLead"
+            },
+            "type": "array",
+            "title": "Leads"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PredictionsMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scope",
+          "radius_km",
+          "recent_anomaly_days",
+          "recent_lightning_days",
+          "weeks_observed",
+          "as_of_week",
+          "leads",
+          "meta"
+        ],
+        "title": "LightningOutlook",
+        "description": "The near-term lightning outlook \u2014 the same damped model, the sparse cousin.\n\nLightning is counted in **lightning-days per week** (calendar days with at\nleast one discharge in the area), so anomalies are strike-days off the\nweek-of-year normal rather than percentage points. The series is zero-filled\nacross its observed span \u2014 a quiet week is a real 0, not a gap \u2014 which is what\nlets a winter lull read as \"below an already-low normal\" instead of vanishing.\n\n`as_of_week` is the latest week the series covers (the last week with strikes\nin range): unlike cloud, lightning data can trail the calendar by months out\nof season, so the UI names the date rather than implying \"this week\". Treat the\nwhole statement as indicative \u2014 weekly lightning is sparse and bursty."
+      },
+      "LightningOutlookLead": {
+        "properties": {
+          "lead_weeks": {
+            "type": "integer",
+            "title": "Lead Weeks"
+          },
+          "alpha": {
+            "type": "number",
+            "title": "Alpha"
+          },
+          "expected_anomaly_days": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Anomaly Days"
+          },
+          "expected_lightning_days": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Lightning Days"
+          },
+          "skill": {
+            "type": "number",
+            "title": "Skill"
+          },
+          "n_origins": {
+            "type": "integer",
+            "title": "N Origins"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lead_weeks",
+          "alpha",
+          "expected_anomaly_days",
+          "expected_lightning_days",
+          "skill",
+          "n_origins"
+        ],
+        "title": "LightningOutlookLead",
+        "description": "One week ahead for lightning, mirroring OutlookLead but in lightning-days.\n\n`expected_anomaly_days` is the damped recent anomaly (alpha * recent), in\nlightning-days \u2014 strike-days above or below the week-of-year normal. Same\ndamped-persistence machinery as cloud; the unit differs because lightning is\ncounted, not measured."
+      },
       "LightningPeriod": {
         "properties": {
           "period": {
@@ -1711,6 +2358,122 @@
         ],
         "title": "LightningStrokesResponse"
       },
+      "ModelScores": {
+        "properties": {
+          "median_skill_pct": {
+            "type": "number",
+            "title": "Median Skill Pct"
+          },
+          "fraction_beating": {
+            "type": "number",
+            "title": "Fraction Beating"
+          },
+          "lead2_median_skill_pct": {
+            "type": "number",
+            "title": "Lead2 Median Skill Pct"
+          },
+          "lead1_skills": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Lead1 Skills"
+          }
+        },
+        "type": "object",
+        "required": [
+          "median_skill_pct",
+          "fraction_beating",
+          "lead2_median_skill_pct",
+          "lead1_skills"
+        ],
+        "title": "ModelScores",
+        "description": "One model's cross-station backtest result \u2014 the spread the UI histograms.\n\n`lead1_skills` is each station's lead-1 MAE skill (%) vs climatology; the\nsummaries headline it. The spread is the honest answer to \"how good is this\nmodel\": most stations positive, a long good tail, some flat. Every model on the\nleaderboard reports this same shape so they're compared apples-to-apples."
+      },
+      "OutlookLead": {
+        "properties": {
+          "lead_weeks": {
+            "type": "integer",
+            "title": "Lead Weeks"
+          },
+          "alpha": {
+            "type": "number",
+            "title": "Alpha"
+          },
+          "expected_anomaly_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Anomaly Pct"
+          },
+          "expected_cloud_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Cloud Pct"
+          },
+          "target_week": {
+            "type": "integer",
+            "title": "Target Week"
+          },
+          "skill": {
+            "type": "number",
+            "title": "Skill"
+          },
+          "n_origins": {
+            "type": "integer",
+            "title": "N Origins"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lead_weeks",
+          "alpha",
+          "expected_anomaly_pct",
+          "expected_cloud_pct",
+          "target_week",
+          "skill",
+          "n_origins"
+        ],
+        "title": "OutlookLead",
+        "description": "One week ahead: how far the model expects to sit off the seasonal normal.\n\n`expected_anomaly_pct` is the damped recent anomaly (alpha * recent), in cloud\npercentage points \u2014 the \"+Y%\" the outlook sentence quotes. `expected_cloud_pct`\nis the *absolute* prediction \u2014 the target week's seasonal normal plus that anomaly,\nclamped 0-100 \u2014 so the UI can say \"expect ~68% cloud\", not just the gap. `alpha` is\nthe fraction of the recent gap expected to carry to this lead (the lag-k weekly\nautocorrelation, fading with lead). `skill` is the weekly rolling-origin MAE skill\nvs climatology at this lead \u2014 the honest \"is this worth saying\"."
+      },
+      "PredictionsMeta": {
+        "properties": {
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "attribution": {
+            "type": "string",
+            "title": "Attribution"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sources",
+          "attribution",
+          "generated_at"
+        ],
+        "title": "PredictionsMeta"
+      },
       "SeriesResponseMeta": {
         "properties": {
           "from": {
@@ -1864,6 +2627,101 @@
           "bbox"
         ],
         "title": "SpatialMetaSweden"
+      },
+      "SpatialNormalPoint": {
+        "properties": {
+          "week": {
+            "type": "integer",
+            "title": "Week"
+          },
+          "estimated_cloud_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Cloud Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "week",
+          "estimated_cloud_pct"
+        ],
+        "title": "SpatialNormalPoint",
+        "description": "One week-of-year slot of a point's estimated cloud normal.\n\n`week` is the ISO week (1..53); `estimated_cloud_pct` is the served model's mean\nestimate for that week across all the years the point's neighbours cover. This is\nthe same week-of-year shape the climatology series carries, so the frontend can\noverlay an estimate curve on the Normals chart without adapting."
+      },
+      "SpatialNormalResponse": {
+        "properties": {
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "title": "Lon"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "nearest_station": {
+            "$ref": "#/components/schemas/SpatialStationMeta"
+          },
+          "n_neighbours": {
+            "type": "integer",
+            "title": "N Neighbours"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/SpatialNormalPoint"
+            },
+            "type": "array",
+            "title": "Series"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PredictionsMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lat",
+          "lon",
+          "model",
+          "nearest_station",
+          "n_neighbours",
+          "series",
+          "meta"
+        ],
+        "title": "SpatialNormalResponse",
+        "description": "A point's estimated week-of-year cloud normal from the nearby SMHI stations.\n\n`model` is a string id (\"nearest\" | \"knn\") so the source/model toggle can add more\nspatial estimators later without a shape change. `nearest_station` is the closest\nstation and `n_neighbours` how many fed the estimate \u2014 the honest provenance for a\npoint with no station of its own."
+      },
+      "SpatialStationMeta": {
+        "properties": {
+          "station_id": {
+            "type": "integer",
+            "title": "Station Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "distance_km": {
+            "type": "number",
+            "title": "Distance Km"
+          }
+        },
+        "type": "object",
+        "required": [
+          "station_id",
+          "name",
+          "distance_km"
+        ],
+        "title": "SpatialStationMeta",
+        "description": "The nearest station to the queried point \u2014 the anchor the UI names."
       },
       "StationResponse": {
         "properties": {

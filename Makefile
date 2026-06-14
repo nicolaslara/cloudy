@@ -25,18 +25,18 @@ create-db: migrate  # deprecated alias
 
 test:
 	cd backend && uv run pytest
-	cd frontend && pnpm test
+	cd frontend && CI=true pnpm test
 
 test-e2e:
-	cd frontend && pnpm test:e2e
+	cd frontend && CI=true pnpm test:e2e
 
 lint:
 	cd backend && uv run ruff check . && uv run ruff format --check .
-	cd frontend && pnpm lint
+	cd frontend && CI=true pnpm lint
 
 typecheck:
 	cd backend && uv run mypy .
-	cd frontend && pnpm typecheck
+	cd frontend && CI=true pnpm typecheck
 
 fmt:
 	cd backend && uv run ruff format .

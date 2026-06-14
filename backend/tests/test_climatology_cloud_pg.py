@@ -106,6 +106,7 @@ def test_monthly_normal_reports_sky_state_shares(stations_sample: Engine) -> Non
     """clear/partial/overcast split usable hours by the okta-style bands (clear
     <25%, overcast >75%, partial between) and sum to ~100 — the honest spread for
     U-shaped cloud that the stacked column draws."""
+
     # One August day: 1 clear, 2 partial, 1 overcast -> 25 / 50 / 25.
     def hour(h: int, pct: float) -> CloudHourly:
         return CloudHourly(

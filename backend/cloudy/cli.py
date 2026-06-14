@@ -49,6 +49,11 @@ def main() -> None:
         help="metobs period (cloud ingest only)",
     )
 
+    subparsers.add_parser(
+        "backtest",
+        help="evaluate the weekly outlook across all stations; write the static benchmark to disk",
+    )
+
     args = parser.parse_args()
     if args.command in {"migrate", "create-db"}:
         from cloudy.db.migrate import upgrade_head
@@ -60,6 +65,8 @@ def main() -> None:
         stamp_head()
     elif args.command == "ingest":
         run_ingest(parser, args)
+    elif args.command == "backtest":
+        run_backtest()
     elif args.command == "serve":
         uvicorn.run(
             "cloudy.api:create_app",
@@ -69,6 +76,22 @@ def main() -> None:
             reload=args.reload,
             log_level=get_settings().log_level.lower(),
         )
+
+
+def run_backtest() -> None:
+    import json
+    from pathlib import Path
+
+    from cloudy.db.session import get_engine
+    from cloudy.logging import configure_logging
+    from cloudy.predictions import evaluate
+
+    configure_logging(get_settings().log_level)
+    artifact = evaluate.evaluate(get_engine())
+    path = Path(get_settings().predictions_scorecard_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(artifact, indent=2), encoding="utf-8")
+    print(f"wrote weekly-outlook benchmark ({artifact['n_stations']} stations) to {path}")
 
 
 def run_ingest(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
@@ -89,11 +112,11 @@ def run_ingest(parser: argparse.ArgumentParser, args: argparse.Namespace) -> Non
         if args.all_active:
             cloud_results = cloud_ingest.ingest_all_active(get_engine(), period=period)
             print(f"{sum(r.rows for r in cloud_results)} hours over {len(cloud_results)} stations")
-            return
-        if args.station is None:
+        elif args.station is not None:
+            result = cloud_ingest.ingest_station(get_engine(), args.station, period=period)
+            print(f"{result.rows} hours for station {result.station_id}")
+        else:
             parser.error("cloud ingest needs --station or --all-active")
-        result = cloud_ingest.ingest_station(get_engine(), args.station, period=period)
-        print(f"{result.rows} hours for station {result.station_id}")
         return
     if args.source != "lightning":
         parser.error(f"unknown ingest source: {args.source}")

@@ -2,8 +2,11 @@ import { useState } from "react";
 import { SearchBox } from "./components/SearchBox";
 import { ViewRail } from "./components/ViewRail";
 import { NormalsView } from "./features/normals";
+import {
+  DampedPersistenceView,
+  PredictionsView,
+} from "./features/predictions";
 import { LightningExplorer } from "./features/exploration";
-import { useHealth } from "./api/health";
 import { useStation } from "./api/station";
 import { useSelectedLocation } from "./lib/useSelectedLocation";
 import type { AppView } from "./lib/views";
@@ -29,10 +32,6 @@ function StationLine({ lat, lon }: { lat: number; lon: number }) {
 // landing; the explore/map views are two presentations of the same exploration
 // LightningExplorer, kept as the secondary "lab".
 export function App() {
-  const { data: health, error } = useHealth();
-  // A failed health request is itself the "unreachable" signal; before the first
-  // response we show "checking" rather than implying anything is wrong.
-  const healthState = error ? "unreachable" : (health?.status ?? "checking");
   const { selected, setSelected, resolving, resolveError } = useSelectedLocation();
   const [view, setView] = useState<AppView>("normals");
 
@@ -61,6 +60,10 @@ export function App() {
         <main className="workspace-main">
           {/* Normals is the headline: the typical year for the selected location. */}
           {view === "normals" && <NormalsView selected={selected} />}
+          {/* Predictions: the weekly near-term outlook vs the seasonal normal. */}
+          {view === "predictions" && <PredictionsView selected={selected} />}
+          {/* Models: one page per prediction model — how it works + its backtest skill. */}
+          {view === "damped_persistence" && <DampedPersistenceView selected={selected} />}
           {/* explore and map share one explorer, differing only in presentation —
               keeps the data wiring and zoom state in a single component. */}
           {(view === "explore" || view === "map") && (
@@ -71,11 +74,6 @@ export function App() {
           )}
         </main>
       </div>
-
-      <footer className="footer">
-        <span className={`dot dot-${healthState}`} aria-label={`backend ${healthState}`} />
-        backend: {healthState}
-      </footer>
     </div>
   );
 }

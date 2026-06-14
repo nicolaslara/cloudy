@@ -27,6 +27,23 @@ export type LightningCurrentMonth =
   components["schemas"]["LightningCurrentMonthExpectation"];
 export type ClimatologyMeta = components["schemas"]["ClimatologyMeta"];
 
+// The spatial model's estimated week-of-year cloud normal at an arbitrary point.
+// It carries a *weekly* series (ISO week 1..53) rather than the climatology's monthly
+// slots, plus the nearest station and neighbour count as honest provenance for a place
+// that has no station of its own.
+export type SpatialNormalResponse = components["schemas"]["SpatialNormalResponse"];
+export type SpatialNormalPoint = components["schemas"]["SpatialNormalPoint"];
+
+// The cloud normal can come from two sources: the nearest-station climatology
+// (today's behaviour) or an estimate at the exact point produced by a model. When
+// estimating, the user also picks which model.
+export type CloudSource = "station" | "estimate";
+// How the week-of-year normal is estimated at a point, in increasing sophistication —
+// the two rungs of one ladder, both returning the same week-of-year series so they
+// read as a progression. The wire values MUST equal the backend's serve.SPATIAL_MODELS
+// ("nearest" | "knn"); friendly labels live in CLOUD_MODEL_LABELS.
+export type CloudModel = "nearest" | "knn";
+
 // Each endpoint offers two discrete radii, not a free range. They differ on
 // purpose: lightning is dense point data so 10/25 km is local; cloud stations are
 // ~50-100 km apart, so its distance is coarser (50 km nearest-area, 100 km a
@@ -95,6 +112,40 @@ export function useCloudNormals(
     // No location is a valid query now — it's the Sweden-wide normal — so this
     // always runs unless a caller explicitly disables it.
     enabled,
+  });
+}
+
+// The spatial estimate is only meaningful for a concrete point (there's no
+// Sweden-wide "estimate at a point"), so unlike the climatology fetchers this one
+// always sends lat/lon. The model id rides as a query param so the seam grows with
+// more spatial models without changing the call shape.
+function fetchSpatialNormal(
+  lat: number,
+  lon: number,
+  model: CloudModel,
+): Promise<SpatialNormalResponse> {
+  const params = new URLSearchParams({ lat: String(lat), lon: String(lon) });
+  // The backend currently serves a single spatial model and ignores a selector, but
+  // we still send it so the wire already carries the choice: the day the route reads
+  // `model`, adding a spatial model is a registry change here, not a plumbing change.
+  params.set("model", model);
+  return getJson<SpatialNormalResponse>(`/api/v1/predictions/spatial?${params.toString()}`);
+}
+
+export function useSpatialNormal(
+  lat: number | undefined,
+  lon: number | undefined,
+  model: CloudModel,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: ["normals", "spatial", lat, lon, model],
+    // Only callable with a concrete point — the non-null assertion is guarded by
+    // the `enabled` gate the caller passes (selected != null).
+    queryFn: () => fetchSpatialNormal(lat!, lon!, model),
+    staleTime: NORMALS_STALE_MS,
+    placeholderData: keepPreviousData,
+    enabled: enabled && lat !== undefined && lon !== undefined,
   });
 }
 
