@@ -29,8 +29,8 @@ def create_app() -> FastAPI:
 
     # CORS: the SPA is served from a different origin (Cloudflare Pages) than
     # the API (Fly), so the browser needs explicit permission. Dev defaults to
-    # "*" (the Vite proxy makes calls same-origin anyway); production sets
-    # cors_allow_origins to the Pages origin only.
+    # the Vite origins only; production sets cors_allow_origins to the Pages
+    # origin.
     origins = [o.strip() for o in settings.cors_allow_origins.split(",") if o.strip()]
     app.add_middleware(
         CORSMiddleware,

@@ -13,11 +13,10 @@ class Settings(BaseSettings):
     raw_data_dir: str = "../data/raw"
     api_port: int = 8400  # frontend/vite.config.ts proxy target must match
     api_docs: bool = True  # /docs, /redoc, /openapi.json; set false to 404 them
-    # Browser origins allowed to call the API (comma-separated). Dev keeps the
-    # Vite proxy so same-origin needs no CORS; the default "*" covers any direct
-    # local fetch. Production sets this to the Cloudflare Pages origin only
-    # (e.g. https://cloudy-web.pages.dev) so no other site can call the API.
-    cors_allow_origins: str = "*"
+    # Browser origins allowed to call the API (comma-separated). Dev keeps this
+    # limited to the Vite app origin; production overrides it with the Cloudflare
+    # Pages origin only (e.g. https://cloudy-web.pages.dev).
+    cors_allow_origins: str = "http://localhost:5273,http://127.0.0.1:5273"
     geocoder: str = "photon"  # or "nominatim" (on-submit only; its policy bans autocomplete)
     cache_backend: str = "memory"  # process-local; switch to a shared backend when >1 server
     # Where `cloudy backtest` writes the static weekly-outlook benchmark the
