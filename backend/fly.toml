@@ -1,0 +1,55 @@
+# Fly.io config for the cloudy backend (FastAPI on Fly Machines).
+#
+# Kept deliberately small: one HTTP service, migrations on deploy, machines that
+# stop when idle and start on the next request. Secrets (DATABASE_URL,
+# CORS_ALLOW_ORIGINS) are NOT here — they're set out of band via `fly secrets`
+# and surface as env vars in the container. Terraform owns provisioning; this
+# file just describes the app shape.
+
+app = "cloudy-api"
+primary_region = "arn"  # Stockholm — closest Fly region to the Swedish data/users.
+
+[build]
+  # Build the Dockerfile in this directory (the backend root is the build context).
+  dockerfile = "Dockerfile"
+
+[deploy]
+  # Run pending Alembic migrations before the new release takes traffic.
+  # `cloudy migrate` == `alembic upgrade head`, reading DATABASE_URL from
+  # settings (cloudy/cli.py -> cloudy/db/migrate.py). If it fails, the deploy
+  # aborts and the old version keeps serving.
+  release_command = "cloudy migrate"
+
+[env]
+  # The app binds 0.0.0.0:$PORT; keep PORT and the service internal_port in
+  # lockstep. Production turns the docs surface off (the API_DOCS setting in
+  # cloudy/config.py 404s /docs, /redoc, /openapi.json when false).
+  PORT = "8080"
+  API_DOCS = "false"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Scale to zero when idle, wake on the next request — this is a low-traffic
+  # demo API, so we don't pay for idle machines.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 50
+    hard_limit = 100
+
+  # Fly health checks hit the app's health route; it degrades (never 500s) when
+  # Postgres is down, so a 200 here means the process is up and serving.
+  [[http_service.checks]]
+    method = "GET"
+    path = "/api/v1/health"
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "10s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

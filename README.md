@@ -54,7 +54,7 @@ make dev-backend           # FastAPI on http://localhost:8400
 make dev-frontend          # (second terminal) Vite on http://localhost:5273
 ```
 
-Open http://localhost:5273/app//app/ — the page calls the API through the Vite dev proxy.
+Open http://localhost:5273/app//app//app/ — the page calls the API through the Vite dev proxy.
 API docs (when `API_DOCS=true`, the default): http://localhost:8400/docs
 Health check directly: `curl http://localhost:8400/api/v1/health` (reports DB
 status; degrades, never crashes, when Postgres is down).
@@ -152,3 +152,7 @@ Log lines show `(replay)` when reading archived raw data vs `(fetched)` on a
 fresh download. Ingest progress is also recorded in the `ingest_runs` table.
 
 Also: `make test`, `make lint`, `make typecheck`, `make fmt`, `make check-length`.
+
+## Deploy
+
+Deploy scaffold lives in [`infra/README.md`](infra/README.md): Neon for Postgres, Fly.io for the FastAPI container, and Cloudflare Pages for the static frontend.

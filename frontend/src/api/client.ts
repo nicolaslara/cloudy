@@ -3,8 +3,22 @@
 // the UI can branch on — react-query treats a thrown ApiError as the query
 // error, and apiErrorMessage maps its status to user-facing copy.
 
+// Single source of truth for where the backend lives. Every call site passes a
+// root-relative path (`/api/v1/...`); we prefix it with this base so the choice
+// of host is made in exactly one place.
+//
+//   dev  → "" (relative). Requests stay same-origin and the Vite dev proxy
+//          (vite.config.ts) forwards /api to the local FastAPI on :8400.
+//   prod → VITE_API_URL, baked in at build time (e.g. the Fly backend URL), so
+//          the static SPA on Pages talks cross-origin to the deployed API.
+//
+// Trailing slashes are stripped so `${API_BASE}${path}` never doubles the `/`.
+const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
+
+// Join the base to a root-relative API path. Kept tiny and pure so both helpers
+// share identical URL construction.
 function apiUrl(path: string): string {
-  return path;
+  return `${API_BASE}${path}`;
 }
 
 // Carries the HTTP status alongside the message so callers can distinguish

@@ -1,0 +1,50 @@
+# Keep the build context tight: the image needs only the manifest+lock, the
+# `cloudy` package, and the alembic config/scripts (for the migrate release
+# command). Everything below is dev-only, regenerable, or large — excluding it
+# speeds the build and keeps secrets/data out of the image.
+
+# Local virtualenv — the image builds its own from the lockfile.
+.venv/
+venv/
+
+# Python caches / bytecode
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Tests and coverage artifacts — not run in the production image.
+tests/
+.coverage
+htmlcov/
+coverage/
+test-results/
+
+# Data downloads (SMHI archives are large; never bake them into the image).
+data/
+*.grib
+*.grib2
+*.nc
+
+# Local env / secrets — config comes from Fly env at runtime, never the image.
+.env
+.env.*
+!.env.example
+
+# VCS and tooling state
+.git/
+.gitignore
+.dockerignore
+Dockerfile
+fly.toml
+
+# Editor / MCP / scratch
+.vscode/
+.idea/
+.playwright-mcp/
+*.log
+
+# Docs / images that don't belong in the runtime image.
+*.png
+snap.md

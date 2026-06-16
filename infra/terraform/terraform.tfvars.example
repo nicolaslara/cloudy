@@ -1,0 +1,46 @@
+# terraform.tfvars.example — copy to terraform.tfvars and fill in REAL values.
+#
+#   cp terraform.tfvars.example terraform.tfvars
+#
+# terraform.tfvars is gitignored (it holds secrets). NEVER commit it, and never
+# put real tokens in this .example file — placeholders only.
+#
+# Alternatively, supply secrets via env (TF_VAR_neon_api_key=..., etc.) and keep
+# only the non-secret knobs here.
+
+# --- Secrets (required) ----------------------------------------------------
+
+# Neon API key: https://console.neon.tech -> Account settings -> API keys
+neon_api_key = "REPLACE_WITH_NEON_API_KEY"
+
+# Fly.io API token: `flyctl auth token`
+fly_api_token = "REPLACE_WITH_FLY_API_TOKEN"
+
+# Cloudflare API token scoped to your account with Pages:Edit
+# (and DNS:Edit only if you set a custom domain with a managed zone).
+cloudflare_api_token = "REPLACE_WITH_CLOUDFLARE_API_TOKEN"
+
+# Cloudflare account ID (not a secret, but account-specific).
+# Dashboard -> any domain -> Overview -> right sidebar "Account ID".
+cloudflare_account_id = "REPLACE_WITH_CLOUDFLARE_ACCOUNT_ID"
+
+# --- Non-secret knobs (optional; defaults shown) ---------------------------
+
+# project_slug   = "cloudy"             # -> Fly app cloudy-api, Pages cloudy-web
+# neon_region_id = "aws-eu-central-1"   # Frankfurt (near Sweden's data)
+# neon_pg_version = 16
+# fly_region     = "arn"                # Stockholm
+# fly_org        = "personal"
+
+# Backend image: leave default for the FIRST apply; flyctl deploy rolls the real
+# image afterward (Terraform ignores image drift). See README.md.
+# backend_image = "registry.fly.io/cloudy-api:latest"
+
+# backend_min_machines_running = 0      # 0 = scale-to-zero (cheapest)
+# backend_memory_mb = 512
+# backend_cpus = 1
+
+# pages_production_branch = "main"
+
+# Custom domain (optional). Leave empty to use the free *.pages.dev URL.
+# frontend_custom_domain = "cloudy.example.com"
