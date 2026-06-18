@@ -1,0 +1,150 @@
+name: deploy
+
+# Continuous deploy, gated on green. Runs only for the canonical main branch so
+# a push to main = a release; workflow_dispatch lets us re-run a deploy by hand
+# (e.g. after rotating a secret) without an empty commit.
+#
+# Topology this deploys into (see the Terraform scaffold + runbook):
+#   - backend  -> Fly.io app "cloudy-api"      (container; serves on $PORT)
+#   - frontend -> Cloudflare Pages "cloudy-web" (static SPA, built with the
+#                 backend URL baked in at build time via VITE_API_URL)
+#   - database -> Neon Postgres; migrations are NOT run here. They run on Fly as
+#                 the release_command (fly.toml) so the schema is upgraded as
+#                 part of the same atomic Fly release, before new machines take
+#                 traffic. Duplicating `cloudy migrate` here would race that.
+#   - terraform -> intentionally NOT in this pipeline. Infra changes are applied
+#                 by hand (`terraform apply`, per the runbook) so a code push can
+#                 never mutate cloud topology. An optional plan-only job could be
+#                 added later, but apply stays manual on purpose.
+#
+# Required GitHub Actions secrets (Settings -> Secrets and variables -> Actions):
+#   FLY_API_TOKEN          - Fly deploy token, scoped to app "cloudy-api"
+#   CLOUDFLARE_API_TOKEN   - Cloudflare token with Pages:Edit on the account
+#   CLOUDFLARE_ACCOUNT_ID  - Cloudflare account id that owns project "cloudy-web"
+#   VITE_API_URL           - public backend origin baked into the SPA build,
+#                            e.g. https://cloudy-api.fly.dev (a non-sensitive
+#                            repo *variable* is also fine; kept as a secret here
+#                            so one mechanism covers every credential)
+# No secret is ever inlined; all are referenced via ${{ secrets.* }}.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One deploy per branch at a time. Unlike ci.yml we do NOT cancel in-progress
+# runs: a half-finished deploy is worse than a slightly stale queue, so newer
+# pushes wait for the current release to settle.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Gate: the exact same checks ci.yml runs, but unconditional (no path filter)
+  # because a deploy must prove the whole tree is green before anything ships.
+  # Mirrors the ci.yml backend job: container + postgres service so the migrate
+  # smoke and conftest test DBs reach Postgres by hostname.
+  test-backend:
+    runs-on: ubuntu-latest
+    container: node:24-bookworm
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: cloudy
+          POSTGRES_USER: cloudy
+          POSTGRES_PASSWORD: cloudy
+        options: >-
+          --health-cmd "pg_isready -U cloudy -d cloudy"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://cloudy:cloudy@postgres:5432/cloudy  # migrate smoke
+      TEST_PG_SERVER: postgresql+psycopg://cloudy:cloudy@postgres:5432/cloudy  # conftest test DBs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy .
+      - run: uv run cloudy migrate
+      - run: uv run pytest
+
+  # Mirrors the ci.yml frontend job. `pnpm build` already runs `tsc --noEmit`
+  # (see package.json), so a type error fails the build the same way prod would.
+  test-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4 # reads "packageManager" from frontend/package.json
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  # Build the backend image from backend/Dockerfile and ship it to Fly app
+  # "cloudy-api". `flyctl deploy` reads fly.toml (app name, $PORT, and the
+  # release_command that runs `cloudy migrate`), so migrations apply as part of
+  # this release — we do not run them here. Remote builder keeps the runner thin.
+  deploy-backend:
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    concurrency:  # never two backend releases at once, regardless of ref
+      group: deploy-backend
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only --config fly.toml --dockerfile backend/Dockerfile
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  # Build the SPA with the backend origin baked in (VITE_API_URL is read at
+  # build time; the dev Vite proxy is irrelevant in prod), then publish the
+  # static output to Cloudflare Pages project "cloudy-web".
+  deploy-frontend:
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Vite's default output dir is dist/; working-directory above is frontend/.
+          command: pages deploy frontend/dist --project-name=cloudy-web --branch=main
+          workingDirectory: ${{ github.workspace }}

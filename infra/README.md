@@ -68,8 +68,10 @@ fly tokens create org -o personal -n cloudy-terraform -x 8760h
 # Store the value WITHOUT the leading "FlyV1 " prefix in terraform.tfvars.
 ```
 
-The same org token is the only Fly credential needed — CI does not deploy, so
-there is no separate app-scoped deploy token. See
+The org token above is for Terraform only. CI deploys the app on every green push
+to `main` and uses its **own** app-scoped Fly deploy token
+(`fly tokens create deploy -a cloudy-api`), stored as the `FLY_API_TOKEN` Actions
+secret — never the org token. See
 [GitHub Actions secrets](#github-actions-secrets-cicd).
 
 **Enable R2 first.** Terraform creates an R2 bucket for the raw archive, but R2
@@ -242,19 +244,25 @@ manual migration step in normal operation.
 
 ## GitHub Actions secrets (CI/CD)
 
-Two workflows live in `.github/workflows/` (deploys are **not** in CI — they run
-from the owner's workstation via `terraform apply`, which holds the local state):
+Three workflows live in `.github/workflows/`. **App code** ships from CI; **infra**
+(cloud topology) is still applied by hand via `terraform apply`, which holds the
+local state — a code push can build and roll the app but never mutate infra.
 
 - **`ci.yml`** — lint/typecheck/test on every PR and push. No secrets.
+- **`deploy.yml`** — on every green push to `main` (and manual dispatch): re-runs
+  the full test suite, then builds + ships the backend image to Fly and the SPA to
+  Cloudflare Pages. Migrations run as the Fly `release_command`, not in the job.
 - **`ingest.yml`** — scheduled/manual data refresh (incremental or smoke).
 
 Set these repository secrets (Settings → Secrets and variables → Actions):
 
-| Secret name             | Used by | Value |
-|-------------------------|---------|-------|
-| `CLOUDFLARE_API_TOKEN`  | ingest  | Cloudflare token with Workers R2 Storage:Edit (ingest archive). The same token from `terraform.tfvars` works. |
-| `CLOUDFLARE_ACCOUNT_ID` | ingest  | Account that owns the R2 bucket. |
-| `DATABASE_URL`          | ingest  | Neon **direct** (non-pooled) URL — `terraform output -raw database_url_direct`. The refresh job runs a backtest and bulk upserts, so it wants the direct endpoint, same as the manual backfill. |
+| Secret name             | Used by         | Value |
+|-------------------------|-----------------|-------|
+| `FLY_API_TOKEN`         | deploy          | App-scoped Fly **deploy** token: `fly tokens create deploy -a cloudy-api`. Store the full `FlyV1 …` value — not the Terraform org token. |
+| `VITE_API_URL`          | deploy          | Public backend origin baked into the SPA build — `https://cloudy-api.fly.dev` (`terraform output -raw backend_url`). |
+| `CLOUDFLARE_API_TOKEN`  | deploy, ingest  | Cloudflare token with Pages:Edit (deploy) and Workers R2 Storage:Edit (ingest archive). The same token from `terraform.tfvars` works. |
+| `CLOUDFLARE_ACCOUNT_ID` | deploy, ingest  | Account that owns the Pages project and R2 bucket. |
+| `DATABASE_URL`          | ingest          | Neon **direct** (non-pooled) URL — `terraform output -raw database_url_direct`. The refresh job runs a backtest and bulk upserts, so it wants the direct endpoint, same as the manual backfill. |
 
 Repository variables:
 
@@ -263,10 +271,11 @@ Repository variables:
 | `RAW_ARCHIVE_BUCKET` | ingest  | R2 bucket name for the `data/raw` archive (defaults to `cloudy-raw`). |
 
 The running app reaches Neon via the pooled `DATABASE_URL` Terraform sets on the
-Fly machine, and migrations run as a Terraform step on each `apply`. The ingest
-workflow is a separate operator job, so it carries its own (direct) Neon URL as a
-secret rather than reusing the app's pooled one. The deploy credentials (Fly token,
-Cloudflare token, `VITE_API_URL`) live only in `terraform.tfvars`, not in CI.
+Fly machine, and migrations run on each release. The ingest workflow is a separate
+operator job, so it carries its own (direct) Neon URL as a secret rather than
+reusing the app's pooled one. Deploy and ingest credentials live as Actions secrets
+(above); the broader Terraform credentials (Neon API key, Fly **org** token) stay
+in `terraform.tfvars` and never enter CI.
 
 ## How the frontend gets `VITE_API_URL`
 
@@ -283,8 +292,11 @@ present when `pnpm build` runs.
 
 ## Day-2 operations
 
-**Deploy a change** — run `terraform apply`. It hashes the backend and frontend
-sources; whatever changed gets rebuilt and shipped, the rest is a no-op:
+**Deploy app code** — push to `main`; `deploy.yml` re-runs the tests, then ships
+the backend to Fly and the SPA to Pages (use `workflow_dispatch` to re-run a deploy
+by hand). **Change infra** — run `terraform apply`. It also hashes the backend and
+frontend sources, so a manual apply rebuilds/ships whatever changed too — use it
+when you're touching topology, not for routine code rolls:
 
 ```bash
 cd infra/terraform
