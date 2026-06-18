@@ -73,47 +73,15 @@ variable "neon_autoscaling_max_cu" {
   default     = 0.25
 }
 
-variable "fly_region" {
-  description = "Primary Fly.io region for the backend machine. `arn` (Stockholm) keeps the API next to its Swedish data and the Neon EU region."
-  type        = string
-  default     = "arn"
-}
-
 variable "fly_org" {
   description = "Fly.io organization slug to create the app in."
   type        = string
   default     = "personal"
 }
 
-variable "backend_image_label" {
-  description = <<-EOT
-    Base prefix for the backend image tag. Terraform appends a content hash of the
-    backend sources, so the effective tag is `<label>-<hash>` and every backend
-    change is rebuilt, migrated, and rolled onto the machine on `terraform apply`.
-    You don't bump this per release — the hash does that; change it only to
-    namespace builds (e.g. per environment).
-  EOT
-  type        = string
-  default     = "tf-bootstrap"
-}
-
-variable "backend_min_machines_running" {
-  description = "Min machines kept running. 0 = scale-to-zero (cheapest; first request after idle pays a cold start). Set to 1 to avoid cold starts."
-  type        = number
-  default     = 0
-}
-
-variable "backend_memory_mb" {
-  description = "RAM (MB) for the backend machine. 512 is comfortable for FastAPI + psycopg; bump if model/backtest work runs in-process."
-  type        = number
-  default     = 512
-}
-
-variable "backend_cpus" {
-  description = "vCPU count for the backend machine."
-  type        = number
-  default     = 1
-}
+# Fly region, machine size, and scale-to-zero now live in backend/fly.toml (the
+# machine is deployed by CI's `flyctl deploy`, not Terraform), so they are no
+# longer Terraform variables.
 
 # ---------------------------------------------------------------------------
 # Frontend / Pages

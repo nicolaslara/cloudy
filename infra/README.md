@@ -4,16 +4,18 @@ How the deployed system is wired and how to operate it. Boring on purpose:
 three managed services, one Terraform config that knows about all three. The
 SPA is static; the API is a container; the database is serverless Postgres.
 
-Terraform owns **both** the infra and the deploy: `terraform apply` provisions the
-three services *and* ships app code — it builds and rolls the backend image (plus
-migrations) and builds and uploads the SPA. There is no push-to-deploy pipeline;
-apply is run by hand, by the owner. GitHub Actions only runs tests (`ci.yml`) and
-the scheduled data refresh (`ingest.yml`).
+Clear split of duties. **Terraform provisions** the cloud topology — the Neon
+project, the Fly **app + IPs**, the Pages **project**, and the R2 bucket — and is
+run by hand by the owner. **CI ships app code** on every green push to `main`
+(`deploy.yml` builds + rolls the backend on Fly and builds + uploads the SPA to
+Pages). So a code push can deploy the app but never mutates infra, and changing
+cloud topology is a deliberate `terraform apply`. GitHub Actions also runs tests
+(`ci.yml`) and the scheduled data refresh (`ingest.yml`).
 
 ## Topology
 
 ```
-                         terraform (coordinates all three)
+                         terraform (provisions all three)
                           │            │              │
               ┌───────────┘            │              └───────────┐
               ▼                        ▼                          ▼
@@ -36,9 +38,10 @@ the scheduled data refresh (`ingest.yml`).
 - **Cloudflare R2** stores a compressed copy of the gitignored `data/raw`
   archive so scheduled ingestion can replay raw SMHI files before downloading
   anything missing.
-- **Terraform** (`infra/terraform/`) declares the Pages project, the Fly app,
-  the Neon project/database, and the R2 raw archive bucket, and stitches their outputs together
-  (e.g. Neon's connection string becomes the Fly secret `DATABASE_URL`).
+- **Terraform** (`infra/terraform/`) declares the Pages project, the Fly app + IPs,
+  the Neon project/database, and the R2 raw archive bucket. Its outputs feed the
+  runtime wiring (e.g. Neon's connection string is set as the Fly `DATABASE_URL`
+  secret — see [Backend runtime secrets](#backend-runtime-secrets-on-fly-not-github)).
 
 The browser loads the SPA from Pages, then calls the Fly API directly over
 HTTPS. In dev nothing changes: Vite's proxy forwards `/api/*` to the local
@@ -79,17 +82,21 @@ is an opt-in product: open the Cloudflare dashboard → R2 once and accept the
 terms, or `terraform apply` fails creating the bucket. (No card needed for the
 free tier; R2 just has to be activated on the account.)
 
-CLIs `terraform apply` shells out to (so they must be installed and on `PATH`
-wherever you apply): [`terraform`](https://developer.hashicorp.com/terraform/install),
-[`flyctl`](https://fly.io/docs/flyctl/install/) (`fly`, image build),
-[`uv`](https://docs.astral.sh/uv/) (runs `cloudy migrate`), and Node's
-`pnpm` + `npx` (SPA build + `wrangler` upload). `wrangler` itself is fetched via
-`npx`, so no global install is required.
+CLIs: `terraform apply` itself only needs
+[`terraform`](https://developer.hashicorp.com/terraform/install) on `PATH` — it
+talks to the provider APIs and no longer shells out to build or deploy anything.
+The app-deploy CLIs ([`flyctl`](https://fly.io/docs/flyctl/install/) for the
+backend, Node's `pnpm` + `wrangler` for the SPA, and
+[`uv`](https://docs.astral.sh/uv/) for `cloudy migrate`) run in CI (`deploy.yml`);
+you only need them locally for a manual deploy or the one-time backfill.
 
 ## One-time setup (owner only)
 
 This is the **only** place real cloud resources are created. CI never runs it.
-One `terraform apply` stands up everything, including the first backend image:
+`terraform apply` stands up the cloud topology — the Neon project, the Fly **app +
+IPs**, the Pages **project**, and the R2 bucket. It does **not** build an image or
+create a machine; the first backend machine (and the first SPA upload) come from a
+deploy.
 
 ```bash
 cd infra/terraform
@@ -99,19 +106,20 @@ terraform plan                                  # review what will be created
 terraform apply                                 # OWNER STEP — creates real infra
 ```
 
-**`flyctl` must be installed and on `PATH`**: the andrewbaxter/fly provider can't
-build a Dockerfile, so the `backend_fly` module shells out to flyctl's **remote
-builder** (no local Docker needed) to build `backend/Dockerfile` and push it to
-`registry.fly.io/cloudy-api`. Terraform sequences this for you inside the single
-apply — create the Fly app → build & push the image → create the machine from it
-— which is why a machine never tries to boot a missing image. The build runs once
-per state; re-applies don't rebuild.
+Then bring up the application. CI does all of this on every push to `main`; the
+manual equivalents below are for the very first deploy:
 
-Every later apply rolls the backend the same way: Terraform hashes the backend
-sources into the image tag, so any code change rebuilds + pushes a new image, runs
-`cloudy migrate` against Neon, and rolls the machine onto it — no out-of-band
-`flyctl deploy`. `backend_image_label` is only the tag *prefix*; the hash, not you,
-bumps the tag per release. Both `flyctl` and `uv` must be on `PATH` for apply.
+1. Set the backend runtime secrets on Fly — the pooled `DATABASE_URL` and
+   `CORS_ALLOW_ORIGINS` (see [Backend runtime secrets](#backend-runtime-secrets-on-fly-not-github)).
+2. Deploy the backend from `backend/`: `flyctl deploy --remote-only` — builds
+   `backend/Dockerfile`, runs `cloudy migrate` as the fly.toml `release_command`,
+   then creates/rolls the machine. (The machine never boots a missing image
+   because the build, migrate, and roll happen in one step.)
+3. Deploy the SPA from `frontend/`: `pnpm install --frozen-lockfile && pnpm build`,
+   then `npx wrangler@4 pages deploy dist --project-name=cloudy-web --branch=main`,
+   with `VITE_API_URL` set to the backend URL.
+
+Or just push to `main` (or `gh workflow run deploy.yml`) and let CI do all three.
 
 `terraform.tfvars` is gitignored. The `.terraform.lock.hcl` provider lockfile
 **is committed** (reproducible provider versions); everything else Terraform
@@ -127,16 +135,18 @@ terraform output -raw database_url      # sensitive — pooled Neon URL (the app
 terraform output -raw database_url_direct # sensitive — direct Neon URL (use for backfill)
 ```
 
-### Backend env the app expects (set as Fly secrets by Terraform)
+### Backend env the app expects (Fly app secrets)
 
 - `DATABASE_URL` — `postgresql+psycopg://…` (psycopg scheme; matches
-  `backend/cloudy/config.py`). Sourced from Neon's connection string.
+  `backend/cloudy/config.py`), the **pooled** Neon URL. Set as a Fly app secret.
 - `PORT` — set by Fly; the container starts with `cloudy serve --host 0.0.0.0
   --port $PORT`. Do **not** hardcode 8400 (that's the local dev default).
 - `CORS_ALLOW_ORIGINS` — the API must allow the Pages origin. The backend reads
-  this comma-separated allow-list (e.g. `https://cloudy-web.pages.dev`);
-  Terraform derives it from the Pages URL and injects it into the Fly machine
-  env, so no manual step is needed.
+  this comma-separated allow-list (e.g. `https://cloudy-web.pages.dev`), set as a
+  Fly app secret (see [Backend runtime secrets](#backend-runtime-secrets-on-fly-not-github)).
+
+Both are Fly **app secrets** (not Terraform-managed machine env), so they persist
+across every `flyctl deploy` and are injected into each machine.
 
 ## First production setup
 
@@ -158,10 +168,10 @@ export DATABASE_URL="$(cd ../infra/terraform && terraform output -raw database_u
 uv run cloudy migrate          # alembic upgrade head
 ```
 
-(`terraform apply` already ran `cloudy migrate` against the *pooled* URL as part
-of the deploy, so the schema is in place. This explicit step is only here because
-the backfill below wants the **direct** endpoint anyway — running migrate again
-against it is a harmless no-op. See [Migrations](#migrations).)
+(Backend deploys also run `cloudy migrate` automatically as the Fly
+`release_command`, so this is idempotent — but running it explicitly here against
+the **direct** endpoint is the simplest way to get the schema in place before the
+backfill, even before the first deploy. See [Migrations](#migrations).)
 
 1. Load the data (replays `data/raw`; no network fetch for archived files):
 
@@ -230,17 +240,17 @@ is missing. Successful refreshes upload the updated archive back to R2.
 
 ## Migrations
 
-Database migrations run automatically on every deploy as a **Terraform step**
-(`terraform_data.migrate` in the `backend_fly` module). On `terraform apply` it
-runs `cloudy migrate` (== `alembic upgrade head`) from the local checkout against
-Neon, ordered **before** the machine rolls onto the new image, so the schema is
-upgraded ahead of the code that needs it. It's idempotent — a no-op when nothing
-is pending — and keyed on the backend source hash, so it re-checks on every change.
+Database migrations run automatically on every backend deploy as the Fly
+**`release_command`** (`backend/fly.toml`: `release_command = "cloudy migrate"`).
+On each `flyctl deploy` (i.e. every green push to `main`) Fly runs `cloudy migrate`
+(== `alembic upgrade head`) against Neon in a one-off release machine **before** the
+new image is rolled out, so the schema is upgraded ahead of the code that needs it.
+It's idempotent — a no-op when nothing is pending.
 
-If the migration fails, the apply stops before the machine is rolled, so the
-previous version keeps serving. (`backend/fly.toml` has no `release_command` — it
-exists only for the image build; the roll and migrations are Terraform's.) No
-manual migration step in normal operation.
+If the release command fails, Fly aborts the deploy and the previous version keeps
+serving. No manual migration step in normal operation; the explicit `cloudy migrate`
+in [First production setup](#first-production-setup) is only for seeding the schema
+before the initial backfill.
 
 ## GitHub Actions secrets (CI/CD)
 
@@ -315,20 +325,10 @@ and ships the SPA to Pages (use `workflow_dispatch` to re-run a deploy by hand).
 This is the path that rolls the backend.
 
 **Change infra** — run `terraform apply` for cloud topology (Neon, the Pages
-project, R2, the Fly app + IPs). Requires `flyctl`, `uv`, `pnpm`, and `npx` on
-`PATH` and the tokens in `terraform.tfvars`. Scope a tier with
-`-target=module.frontend_pages`, `-target=module.neon`, etc.
-
-> [!IMPORTANT]
-> **Backend machine ownership is mid-transition.** CI (`flyctl deploy`) now owns
-> the backend image build, the migrate, and the machine roll; runtime config lives
-> in Fly app secrets (see above). Terraform's `backend_fly` module still *declares*
-> a `fly_machine` it no longer manages — that machine was removed from state during
-> the cutover — so **`terraform apply` would try to recreate it and collide with
-> the CI-managed machines.** Do not apply `module.backend_fly`'s machine until the
-> module is reconciled (drop `fly_machine` / `image_push` / `migrate`, keeping
-> `fly_app` + `fly_ip`). `module.neon`, `module.frontend_pages`, and R2 apply
-> normally.
+project, R2, the Fly app + IPs). Only needs `terraform` on `PATH` and the tokens in
+`terraform.tfvars`; it no longer builds or deploys app code, so a clean checkout
+plans as **no changes**. Scope a tier with `-target=module.frontend_pages`,
+`-target=module.neon`, etc.
 
 **Refresh data** — scheduled weekly by `.github/workflows/ingest.yml`, or trigger
 it manually. The workflow requires the `DATABASE_URL` repository secret,
@@ -345,20 +345,18 @@ gh workflow run ingest.yml --ref main -f mode=smoke
 scripts/raw-archive.sh upload
 ```
 
-**Roll back** — the durable way is to revert the offending commit and
-`terraform apply` (Terraform rebuilds the now-previous source and rolls). For a
-fast manual revert without changing code:
+**Roll back** — the durable way is to revert the offending commit and push; CI
+redeploys the now-previous code. For a fast manual revert without changing code:
 
 ```bash
-# Backend — point the machine back at a prior image tag (tags are <prefix>-<hash>):
-fly image show --app cloudy-api               # current tag
-fly machine list --app cloudy-api            # machine id
-fly machine update <machine-id> --image registry.fly.io/cloudy-api:<prev-tag> --yes
+# Backend — redeploy a prior image (flyctl tags each deploy):
+fly releases --app cloudy-api                 # deploy history + image refs
+fly deploy --app cloudy-api -c backend/fly.toml --image registry.fly.io/cloudy-api:<prev-tag>
 # Pages: Cloudflare dashboard → cloudy-web → Deployments → "Rollback"
 ```
 
-Note a later `terraform apply` will re-roll the machine to the tag for the current
-source, so land the code revert too if the rollback should stick.
+A manual image rollback sticks until the next push to `main` redeploys current
+code, so land the code revert too if the rollback should be permanent.
 
 **View logs**
 
@@ -376,9 +374,8 @@ cd infra/terraform && terraform destroy
 
 ## Guardrails
 
-- `terraform apply` creates real resources and ships code (it shells out to
-  flyctl/wrangler under the hood) — run it deliberately, never from a
-  scaffold-validation step. Use `terraform plan` first.
+- `terraform apply` creates real cloud resources — run it deliberately, never from
+  a scaffold-validation step. Use `terraform plan` first.
 - No real secrets in tracked files. `terraform.tfvars`, `*.tfstate`, and
   `.env.production` are gitignored; only `*.example` files are committed.
 - Keep it simple: managed services, one Terraform config, boring defaults.

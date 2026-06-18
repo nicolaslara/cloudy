@@ -10,9 +10,9 @@ provider "neon" {
   api_key = var.neon_api_key
 }
 
-# Fly.io — manages the app shell, machines, and IPs for the backend container.
-# (Image build uses flyctl's remote builder; the roll + `cloudy migrate` are run
-# by Terraform itself on apply — see the backend_fly module.)
+# Fly.io — manages the app shell and public IPs for the backend. The image build,
+# `cloudy migrate`, and the machine roll are owned by CI (`flyctl deploy`); this
+# provider just needs a token to manage the app + IPs. See the backend_fly module.
 provider "fly" {
   fly_api_token = var.fly_api_token
 }

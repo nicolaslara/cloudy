@@ -15,11 +15,6 @@ locals {
   pages_project     = "${var.project_slug}-web"
   raw_bucket_name   = var.raw_archive_bucket_name != "" ? var.raw_archive_bucket_name : "${var.project_slug}-raw"
   neon_project_name = var.project_slug
-  # The SPA's public origin, derived from the slug (mirrors frontend_pages's
-  # pages_url output). Computed as a local rather than read back from the module
-  # so backend_fly can lock CORS to it WITHOUT creating a backend<->pages cycle
-  # (pages already depends on backend for VITE_API_URL).
-  pages_url = var.frontend_custom_domain != "" ? "https://${var.frontend_custom_domain}" : "https://${local.pages_project}.pages.dev"
 }
 
 # Raw SMHI archive storage. This is not served by the app; it is an operator
@@ -46,38 +41,27 @@ module "neon" {
   # database_name / role_name default to "cloudy" (matches local dev).
 }
 
-# 2) Backend — receives DATABASE_URL from Neon; exposes its public HTTPS URL.
+# 2) Backend — the Fly app + public IPs only. The image build, `cloudy migrate`,
+# and the machine roll are owned by CI (`flyctl deploy`); the machine's shape lives
+# in backend/fly.toml and runtime config (DATABASE_URL from Neon, CORS_ALLOW_ORIGINS)
+# is set as Fly app secrets out of band. See modules/backend_fly for the rationale.
 module "backend_fly" {
   source = "./modules/backend_fly"
 
   app_name = local.fly_app_name
   org      = var.fly_org
-  region   = var.fly_region
-
-  # Terraform builds & pushes the image (via flyctl's remote builder), migrates,
-  # and rolls the machine on every apply, so it needs the Fly token. image_label
-  # is just the tag prefix; the module appends a content hash per release.
-  fly_api_token = var.fly_api_token
-  image_label   = var.backend_image_label
-
-  database_url = module.neon.database_url
-
-  # Lock the API's CORS to the SPA origin so no other site can call it.
-  cors_allow_origins = local.pages_url
-
-  min_machines_running = var.backend_min_machines_running
-  memory_mb            = var.backend_memory_mb
-  cpus                 = var.backend_cpus
 }
 
-# 3) Frontend — bakes the backend URL into the SPA build as VITE_API_URL.
+# 3) Frontend — the Pages project only. The SPA is built and uploaded by CI
+# (`wrangler pages deploy`, with VITE_API_URL baked in from the deploy workflow's
+# own secret). api_url is still wired into the project's build-time env so a
+# git-connected Pages build would get the right backend URL if that's ever enabled.
 module "frontend_pages" {
   source = "./modules/frontend_pages"
 
-  account_id           = var.cloudflare_account_id
-  cloudflare_api_token = var.cloudflare_api_token
-  project_name         = local.pages_project
-  production_branch    = var.pages_production_branch
+  account_id        = var.cloudflare_account_id
+  project_name      = local.pages_project
+  production_branch = var.pages_production_branch
 
   api_url = module.backend_fly.backend_url
 

@@ -3,12 +3,6 @@ variable "account_id" {
   type        = string
 }
 
-variable "cloudflare_api_token" {
-  description = "Cloudflare API token (Pages:Edit) passed to the wrangler CLI that uploads the built SPA. Sensitive; the same token the provider uses."
-  type        = string
-  sensitive   = true
-}
-
 variable "project_name" {
   description = "Pages project name (the deploy contract fixes this to `cloudy-web`)."
   type        = string

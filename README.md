@@ -165,10 +165,13 @@ First production setup, in short:
 1. Fill `terraform.tfvars` (incl. `neon_org_id` and a **long-lived org-scoped**
    Fly token from `fly tokens create org`, *not* `fly auth token`), and enable R2
    on the Cloudflare account once.
-2. `terraform apply` in `infra/terraform/` — one apply creates Neon, the Fly app,
-   and Pages, and builds & pushes the backend image itself via flyctl's remote
-   builder (so `flyctl` must be installed; no manual image step).
-3. From your **workstation**, apply the schema and run the backfill against
+2. `terraform apply` in `infra/terraform/` — provisions Neon, the Fly app + IPs,
+   the Pages project, and R2 (it no longer builds or deploys app code).
+3. Set the backend's Fly secrets (pooled `DATABASE_URL`, `CORS_ALLOW_ORIGINS`),
+   then deploy the app — push to `main` (CI's `deploy.yml`), or by hand run
+   `flyctl deploy` from `backend/` (builds the image, runs `cloudy migrate` via the
+   `release_command`, rolls the machine) and `wrangler pages deploy` the built SPA.
+4. From your **workstation**, apply the schema and run the backfill against
    Neon's **direct** (non-pooled) endpoint, replaying the local `data/raw`
    archive — no SMHI re-download:
 
@@ -179,7 +182,7 @@ uv run cloudy migrate
 RAW_DATA_DIR=../data/raw uv run cloudy ingest-production full
 ```
 
-4. `scripts/raw-archive.sh upload` so the scheduled ingest workflow can restore
+5. `scripts/raw-archive.sh upload` so the scheduled ingest workflow can restore
    the same archive from R2.
 
 The full history (~22M rows / several GB) needs a **paid Neon plan** — the Free

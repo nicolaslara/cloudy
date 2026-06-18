@@ -40,17 +40,10 @@ neon_org_id = "REPLACE_WITH_NEON_ORG_ID"
 # project_slug   = "cloudy"             # -> Fly app cloudy-api, Pages cloudy-web
 # neon_region_id = "aws-eu-central-1"   # Frankfurt (near Sweden's data)
 # neon_pg_version = 16
-# fly_region     = "arn"                # Stockholm
 # fly_org        = "personal"
 
-# Backend image: Terraform builds & pushes it for you on the first apply (via
-# flyctl's remote builder — flyctl must be installed). This is just the tag it
-# uses; bump it to force a rebuild. Day-2 image rolls go through flyctl deploy/CI.
-# backend_image_label = "tf-bootstrap"
-
-# backend_min_machines_running = 0      # 0 = scale-to-zero (cheapest)
-# backend_memory_mb = 512
-# backend_cpus = 1
+# Fly region, machine size, and scale-to-zero live in backend/fly.toml — the
+# backend machine is built and rolled by CI (`flyctl deploy`), not Terraform.
 
 # Max Neon compute (CUs) under load. Min is fixed at 0.25 with scale-to-zero, so
 # this only adds cost while compute is busy. Default 0.25; raise it (e.g. 4) to

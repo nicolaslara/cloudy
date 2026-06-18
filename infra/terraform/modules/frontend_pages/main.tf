@@ -15,11 +15,12 @@
 # Connecting the git repo: a `source` block (GitHub/GitLab) would let Pages build
 # on push, but that requires a pre-linked VCS account on the Cloudflare side
 # (can't be done in Terraform) and would couple this to a specific git host. We
-# deliberately leave `source` out: instead Terraform itself builds the SPA and
-# uploads the prebuilt assets via wrangler (terraform_data.pages_deploy, below),
-# so `terraform apply` is the single deploy. The build_config below is therefore
-# only used if a git-connected build is ever turned on; wrangler direct-upload
-# ignores it. Add a `source` block later if git-connected builds are wanted.
+# deliberately leave `source` out: the SPA is built and uploaded by CI
+# (`.github/workflows/deploy.yml` runs `pnpm build` + `wrangler pages deploy`), so
+# this module owns only the Pages *project* — its settings and the build-time
+# VITE_API_URL. The build_config below is only used if a git-connected build is
+# ever turned on; wrangler direct-upload from CI ignores it. Add a `source` block
+# later if git-connected builds are wanted.
 
 resource "cloudflare_pages_project" "this" {
   account_id        = var.account_id
@@ -81,58 +82,4 @@ resource "cloudflare_dns_record" "pages_cname" {
   content = "${cloudflare_pages_project.this.name}.pages.dev"
   proxied = true
   ttl     = 1 # 1 = automatic (required by the cloudflare v5 provider)
-}
-
-# --- Build + deploy the SPA (Terraform-owned) ------------------------------
-#
-# The provider only manages the Pages *project*; it never uploads assets. So this
-# step builds the SPA and publishes the prebuilt output with wrangler — making
-# `terraform apply` the one deploy command for the frontend.
-#
-# triggers_replace is a content hash of the SPA sources plus the baked-in API URL,
-# so the build+upload re-runs exactly when the app (or its backend origin) changes
-# and is a no-op otherwise. VITE_API_URL is inlined at build time (Vite), and the
-# Cloudflare creds are passed to wrangler via env (token auth, deterministic in CI
-# and locally). --commit-dirty silences wrangler's uncommitted-tree warning, which
-# is expected here since we build from the working checkout.
-locals {
-  frontend_dir = abspath("${path.root}/../../frontend")
-
-  # The SPA ships only the /app/ entry today; the bare domain is handled by a
-  # redirect the build itself emits (see frontend/vite.config.ts), not a
-  # host-specific rule here. So there is no root index.html *source*, and it's
-  # intentionally left out of this input hash — vite.config.ts already is, so a
-  # change to the redirect still re-triggers a deploy. A real root page lands
-  # separately and would be added here then.
-  frontend_source_files = sort(concat(
-    ["package.json", "pnpm-lock.yaml", "vite.config.ts", "tsconfig.json"],
-    tolist(fileset(local.frontend_dir, "src/**")),
-    tolist(fileset(local.frontend_dir, "app/**")),
-    tolist(fileset(local.frontend_dir, "public/**")),
-  ))
-
-  frontend_hash = substr(sha256(join("", [
-    for f in local.frontend_source_files : filesha256("${local.frontend_dir}/${f}")
-  ])), 0, 16)
-}
-
-resource "terraform_data" "pages_deploy" {
-  triggers_replace = {
-    hash    = local.frontend_hash
-    api_url = var.api_url
-    project = cloudflare_pages_project.this.name
-    branch  = var.production_branch
-  }
-
-  provisioner "local-exec" {
-    working_dir = local.frontend_dir
-    command     = "pnpm install --frozen-lockfile && pnpm build && npx --yes wrangler@4 pages deploy ${var.destination_dir} --project-name=${cloudflare_pages_project.this.name} --branch=${var.production_branch} --commit-dirty=true"
-    environment = {
-      VITE_API_URL          = var.api_url
-      CLOUDFLARE_API_TOKEN  = var.cloudflare_api_token
-      CLOUDFLARE_ACCOUNT_ID = var.account_id
-    }
-  }
-
-  depends_on = [cloudflare_pages_project.this]
 }
