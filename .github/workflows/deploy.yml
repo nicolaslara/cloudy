@@ -8,10 +8,11 @@ name: deploy
 #   - backend  -> Fly.io app "cloudy-api"      (container; serves on $PORT)
 #   - frontend -> Cloudflare Pages "cloudy-web" (static SPA, built with the
 #                 backend URL baked in at build time via VITE_API_URL)
-#   - database -> Neon Postgres; migrations are NOT run here. They run on Fly as
-#                 the release_command (fly.toml) so the schema is upgraded as
-#                 part of the same atomic Fly release, before new machines take
-#                 traffic. Duplicating `cloudy migrate` here would race that.
+#   - database -> Neon Postgres; migrations are NOT run in this pipeline. The
+#                 schema is owned by `terraform apply`, which runs `cloudy migrate`
+#                 (against Neon's direct URL) before rolling the machine. CI ships
+#                 code only, so a schema change must go out via terraform apply —
+#                 a bare code push assumes the DB is already at head.
 #   - terraform -> intentionally NOT in this pipeline. Infra changes are applied
 #                 by hand (`terraform apply`, per the runbook) so a code push can
 #                 never mutate cloud topology. An optional plan-only job could be
@@ -101,20 +102,24 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
-  # Build the backend image from backend/Dockerfile and ship it to Fly app
-  # "cloudy-api". `flyctl deploy` reads fly.toml (app name, $PORT, and the
-  # release_command that runs `cloudy migrate`), so migrations apply as part of
-  # this release — we do not run them here. Remote builder keeps the runner thin.
+  # Build the backend image and ship it to Fly app "cloudy-api". We run from
+  # backend/ so flyctl reads backend/fly.toml (app name + [build] dockerfile) and
+  # uses backend/ as the Docker build context — the same context Terraform builds
+  # with. Migrations are NOT run here (see the header note); the schema is
+  # Terraform's. The remote builder keeps the runner thin (no local Docker).
   deploy-backend:
     needs: [test-backend, test-frontend]
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     concurrency:  # never two backend releases at once, regardless of ref
       group: deploy-backend
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only --config fly.toml --dockerfile backend/Dockerfile
+      - run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
