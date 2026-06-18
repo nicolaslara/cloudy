@@ -270,12 +270,29 @@ Repository variables:
 |----------------------|---------|-------|
 | `RAW_ARCHIVE_BUCKET` | ingest  | R2 bucket name for the `data/raw` archive (defaults to `cloudy-raw`). |
 
-The running app reaches Neon via the pooled `DATABASE_URL` Terraform sets on the
-Fly machine, and migrations run on each release. The ingest workflow is a separate
-operator job, so it carries its own (direct) Neon URL as a secret rather than
-reusing the app's pooled one. Deploy and ingest credentials live as Actions secrets
-(above); the broader Terraform credentials (Neon API key, Fly **org** token) stay
-in `terraform.tfvars` and never enter CI.
+The running app reaches Neon via the pooled `DATABASE_URL`, and its CORS origin via
+`CORS_ALLOW_ORIGINS` — both are **Fly app secrets** (`fly secrets set`), not GitHub
+secrets: Fly injects them into every machine and preserves them across `flyctl
+deploy`, so a CI roll never drops them. Migrations apply on each release via the
+`release_command`. The ingest workflow is a separate operator job, so it carries
+its own (direct) Neon URL as a *repository* secret rather than reusing the app's
+pooled one. Deploy/ingest repo credentials live as Actions secrets (above); the
+broader Terraform credentials (Neon API key, Fly **org** token) stay in
+`terraform.tfvars` and never enter CI.
+
+### Backend runtime secrets (on Fly, not GitHub)
+
+Set once on the app; they survive every deploy:
+
+```bash
+fly secrets set \
+  DATABASE_URL="$(cd infra/terraform && terraform output -raw database_url)" \
+  CORS_ALLOW_ORIGINS="https://cloudy-web.pages.dev" \
+  -a cloudy-api
+```
+
+`DATABASE_URL` here is the **pooled** Neon URL (what the app uses); the direct URL
+is only for bulk/ingest jobs. Rotate these here if the Neon credentials change.
 
 ## How the frontend gets `VITE_API_URL`
 
@@ -292,22 +309,26 @@ present when `pnpm build` runs.
 
 ## Day-2 operations
 
-**Deploy app code** — push to `main`; `deploy.yml` re-runs the tests, then ships
-the backend to Fly and the SPA to Pages (use `workflow_dispatch` to re-run a deploy
-by hand). **Change infra** — run `terraform apply`. It also hashes the backend and
-frontend sources, so a manual apply rebuilds/ships whatever changed too — use it
-when you're touching topology, not for routine code rolls:
+**Deploy app code** — push to `main`; `deploy.yml` re-runs the tests, then builds
+the backend image, runs migrations (Fly `release_command`), rolls the Fly machine,
+and ships the SPA to Pages (use `workflow_dispatch` to re-run a deploy by hand).
+This is the path that rolls the backend.
 
-```bash
-cd infra/terraform
-terraform apply
-# backend changed → rebuild+push image, cloudy migrate, roll the Fly machine
-# frontend changed → pnpm build with VITE_API_URL, wrangler upload to Pages
-```
+**Change infra** — run `terraform apply` for cloud topology (Neon, the Pages
+project, R2, the Fly app + IPs). Requires `flyctl`, `uv`, `pnpm`, and `npx` on
+`PATH` and the tokens in `terraform.tfvars`. Scope a tier with
+`-target=module.frontend_pages`, `-target=module.neon`, etc.
 
-Requires `flyctl`, `uv`, `pnpm`, and `npx` on `PATH` (apply shells out to them),
-and the tokens in `terraform.tfvars`. Scope a single tier if you want with
-`-target=module.backend_fly` or `-target=module.frontend_pages`.
+> [!IMPORTANT]
+> **Backend machine ownership is mid-transition.** CI (`flyctl deploy`) now owns
+> the backend image build, the migrate, and the machine roll; runtime config lives
+> in Fly app secrets (see above). Terraform's `backend_fly` module still *declares*
+> a `fly_machine` it no longer manages — that machine was removed from state during
+> the cutover — so **`terraform apply` would try to recreate it and collide with
+> the CI-managed machines.** Do not apply `module.backend_fly`'s machine until the
+> module is reconciled (drop `fly_machine` / `image_push` / `migrate`, keeping
+> `fly_app` + `fly_ip`). `module.neon`, `module.frontend_pages`, and R2 apply
+> normally.
 
 **Refresh data** — scheduled weekly by `.github/workflows/ingest.yml`, or trigger
 it manually. The workflow requires the `DATABASE_URL` repository secret,

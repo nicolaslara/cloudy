@@ -13,12 +13,15 @@ primary_region = "arn"  # Stockholm — closest Fly region to the Swedish data/u
   # Build the Dockerfile in this directory (the backend root is the build context).
   dockerfile = "Dockerfile"
 
-# No [deploy] release_command: deploys are driven by `terraform apply`, which runs
-# `cloudy migrate` itself (terraform_data.migrate in infra/.../backend_fly) before
-# rolling the machine. This file is read by flyctl's remote builder for the image
-# build (app name + [build] dockerfile); the machine, the roll, and migrations are
-# Terraform's. The weekly backtest is a static artifact shipped in the image, so
-# no per-deploy evaluation runs.
+# Migrations run as the release_command on every deploy: flyctl runs `cloudy
+# migrate` (alembic upgrade head) in a one-off machine on the NEW image before it
+# takes traffic, so the schema is ready ahead of the code that needs it. It reads
+# DATABASE_URL from the app's Fly secrets (the pooled Neon URL); migrations are
+# short, so the pooler is fine. Idempotent — a no-op when nothing is pending. The
+# image ships alembic/ + alembic.ini for exactly this. The weekly backtest is a
+# static artifact baked into the image, so no per-deploy evaluation runs.
+[deploy]
+  release_command = "cloudy migrate"
 
 [env]
   # The app binds 0.0.0.0:$PORT; keep PORT and the service internal_port in

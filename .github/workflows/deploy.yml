@@ -8,11 +8,14 @@ name: deploy
 #   - backend  -> Fly.io app "cloudy-api"      (container; serves on $PORT)
 #   - frontend -> Cloudflare Pages "cloudy-web" (static SPA, built with the
 #                 backend URL baked in at build time via VITE_API_URL)
-#   - database -> Neon Postgres; migrations are NOT run in this pipeline. The
-#                 schema is owned by `terraform apply`, which runs `cloudy migrate`
-#                 (against Neon's direct URL) before rolling the machine. CI ships
-#                 code only, so a schema change must go out via terraform apply —
-#                 a bare code push assumes the DB is already at head.
+#   - database -> Neon Postgres; migrations run as the Fly release_command
+#                 (fly.toml runs `cloudy migrate` on the new image before it takes
+#                 traffic), so a push that includes a migration applies it as part
+#                 of the same release. Idempotent — a no-op when none are pending.
+#   - runtime config -> DATABASE_URL and CORS_ALLOW_ORIGINS are Fly *secrets*
+#                 (`fly secrets set`), injected into every machine and preserved
+#                 across `flyctl deploy`. Terraform provisions the app, IPs, Neon,
+#                 Pages, and R2; CI owns the image build, the migrate, and the roll.
 #   - terraform -> intentionally NOT in this pipeline. Infra changes are applied
 #                 by hand (`terraform apply`, per the runbook) so a code push can
 #                 never mutate cloud topology. An optional plan-only job could be
@@ -103,10 +106,9 @@ jobs:
       - run: pnpm build
 
   # Build the backend image and ship it to Fly app "cloudy-api". We run from
-  # backend/ so flyctl reads backend/fly.toml (app name + [build] dockerfile) and
-  # uses backend/ as the Docker build context — the same context Terraform builds
-  # with. Migrations are NOT run here (see the header note); the schema is
-  # Terraform's. The remote builder keeps the runner thin (no local Docker).
+  # backend/ so flyctl reads backend/fly.toml (app name, [build] dockerfile, and
+  # the [deploy] release_command that migrates) and uses backend/ as the Docker
+  # build context. The remote builder keeps the runner thin (no local Docker).
   deploy-backend:
     needs: [test-backend, test-frontend]
     runs-on: ubuntu-latest
