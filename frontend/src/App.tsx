@@ -49,7 +49,18 @@ export function App() {
         </div>
         {selected && (
           <div className="location-filter">
-            <h2>{selected.label}</h2>
+            <div className="location-filter-head">
+              <h2>{selected.label}</h2>
+              {/* Clearing resets to the Sweden-wide view; setSelected(null) also drops
+                  the ?location=/?latlng= params so the address bar matches the state. */}
+              <button
+                type="button"
+                className="clear-location"
+                onClick={() => setSelected(null)}
+              >
+                Clear
+              </button>
+            </div>
             <StationLine lat={selected.lat} lon={selected.lon} />
           </div>
         )}

@@ -13,9 +13,22 @@ variable "region" {
   type        = string
 }
 
-variable "image" {
-  description = "Fully-qualified container image to run (built/pushed by `flyctl deploy`, not Terraform)."
+variable "fly_api_token" {
+  description = "Fly API token, handed to the `flyctl` invocation that builds and pushes the initial image (the same token the fly provider uses). Sensitive."
   type        = string
+  sensitive   = true
+}
+
+variable "image_label" {
+  description = <<-EOT
+    Base prefix for the backend image tag. The module appends a content hash of the
+    image sources, so the effective tag is `<image_label>-<hash>` and every backend
+    change produces a new tag that Terraform rebuilds, pushes, migrates, and rolls
+    onto the machine on `terraform apply`. You do NOT bump this per release — the
+    hash does that; change it only to namespace builds (e.g. per environment).
+  EOT
+  type        = string
+  default     = "tf-bootstrap"
 }
 
 variable "database_url" {

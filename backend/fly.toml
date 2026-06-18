@@ -13,12 +13,12 @@ primary_region = "arn"  # Stockholm — closest Fly region to the Swedish data/u
   # Build the Dockerfile in this directory (the backend root is the build context).
   dockerfile = "Dockerfile"
 
-[deploy]
-  # Run pending Alembic migrations before the new release takes traffic.
-  # `cloudy migrate` == `alembic upgrade head`, reading DATABASE_URL from
-  # settings (cloudy/cli.py -> cloudy/db/migrate.py). If it fails, the deploy
-  # aborts and the old version keeps serving.
-  release_command = "cloudy migrate"
+# No [deploy] release_command: deploys are driven by `terraform apply`, which runs
+# `cloudy migrate` itself (terraform_data.migrate in infra/.../backend_fly) before
+# rolling the machine. This file is read by flyctl's remote builder for the image
+# build (app name + [build] dockerfile); the machine, the roll, and migrations are
+# Terraform's. The weekly backtest is a static artifact shipped in the image, so
+# no per-deploy evaluation runs.
 
 [env]
   # The app binds 0.0.0.0:$PORT; keep PORT and the service internal_port in

@@ -10,6 +10,7 @@ import logging
 import time
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
+from functools import partial
 from pathlib import Path
 
 import httpx
@@ -17,6 +18,7 @@ from sqlalchemy import Connection, Engine, delete, insert, text
 
 from cloudy.config import get_settings
 from cloudy.db.models import IngestRun, LightningEvent
+from cloudy.ingest.retry import with_reconnect
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +63,14 @@ _INSERT_SWEDEN_DAILY_ROLLUPS_SQL = text(
     WHERE day BETWEEN :date_from AND :date_to
     GROUP BY day, source, source_version
     ORDER BY day
+    ON CONFLICT (source, source_version, day) DO UPDATE SET
+        bucket_start = EXCLUDED.bucket_start,
+        bucket_end = EXCLUDED.bucket_end,
+        cg_count = EXCLUDED.cg_count,
+        all_count = EXCLUDED.all_count,
+        lightning_days = EXCLUDED.lightning_days,
+        max_abs_peak_ka = EXCLUDED.max_abs_peak_ka,
+        strongest_event_time = EXCLUDED.strongest_event_time
     """
 )
 
@@ -225,7 +235,12 @@ def ingest_range(engine: Engine, start: date, end: date, delay_s: float = 1.0) -
     try:
         day = start
         while day <= end:
-            result = ingest_day(engine, day)
+            # Each day is a self-contained idempotent transaction, so a dropped
+            # connection mid-backfill just re-runs the day rather than aborting
+            # the whole multi-year range.
+            result = with_reconnect(
+                engine, partial(ingest_day, engine, day), what=f"lightning {day}"
+            )
             results.append(result)
             # Only rate-limit when we actually hit SMHI; a replay from data/raw
             # touches no network, so a cached backfill runs at full speed.

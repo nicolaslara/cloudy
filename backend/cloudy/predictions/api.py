@@ -53,9 +53,10 @@ def _meta(sources: list[str]) -> PredictionsMeta:
 
 @router.get("/predictions/backtest")
 def backtest_route() -> BacktestArtifact:
-    # Read-only: the cross-station benchmark is written by `cloudy backtest`. If the
-    # file is missing the model hasn't been evaluated yet — a precondition (503),
-    # not a bad request.
+    # Read-only: the cross-station benchmark is written by `cloudy backtest` and
+    # committed as a static file shipped with the app, so it serves out of the box.
+    # A missing file means the model hasn't been evaluated yet — a precondition
+    # (503), not a bad request.
     path = Path(get_settings().predictions_scorecard_path)
     if not path.exists():
         raise HTTPException(503, "model not evaluated yet — run: cloudy backtest")

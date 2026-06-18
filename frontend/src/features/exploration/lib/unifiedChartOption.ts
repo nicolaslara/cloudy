@@ -94,6 +94,11 @@ export function toUnifiedChartOption(
         name: "Mean cloud cover",
         type: "line",
         yAxisIndex: 0,
+        // Cloud draws against the edge-to-edge twin x-axis (index 1, boundaryGap
+        // false) so the filled area meets both frame edges instead of floating a
+        // half-bucket in from each side. The bars stay on axis 0 (boundaryGap
+        // true) so the first/last bucket isn't sliced in half at the frame.
+        xAxisIndex: 1,
         connectNulls: false,
         showSymbol: false,
         smooth: 0.15,
@@ -139,11 +144,34 @@ export function toUnifiedChartOption(
       axisPointer: { type: "cross" },
       formatter: formatter as TooltipComponentOption["formatter"],
     },
-    xAxis: {
-      type: "category",
-      data: categories,
-      ...categoryAxisStyle((period) => tickLabel(period, resolution)),
-    },
+    // Two category x-axes over the same buckets. Axis 0 is the visible one and
+    // carries the bars with the default boundaryGap (bars sit centred in their
+    // bucket, edges intact). Axis 1 is an invisible twin with boundaryGap:false
+    // that only the cloud line/area rides, so the curve spans the full width.
+    // They share categories, so the inside dataZoom (which auto-links parallel
+    // x-axes in a grid) pans and zooms both together. The twin axis is omitted
+    // when there's no cloud line to avoid a dangling unused axis.
+    xAxis: [
+      {
+        type: "category",
+        data: categories,
+        ...categoryAxisStyle((period) => tickLabel(period, resolution)),
+      },
+      ...(includeCloud
+        ? [
+            {
+              type: "category" as const,
+              data: categories,
+              boundaryGap: false,
+              show: false,
+              // It's a layout-only helper, so keep it out of the crosshair: the
+              // shared tooltip already labels the bucket off axis 0, and a second
+              // x pointer here would just print the period twice.
+              axisPointer: { show: false },
+            },
+          ]
+        : []),
+    ],
     yAxis: [
       {
         type: "value",

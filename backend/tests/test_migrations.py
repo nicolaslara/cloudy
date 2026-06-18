@@ -52,13 +52,14 @@ def test_upgrade_head_creates_tables(_empty_db_url: str, monkeypatch: pytest.Mon
     assert tables == {
         "alembic_version",
         "cloud_hourly",
+        "cloud_normals",
         "cloud_rollups",
         "ingest_runs",
         "lightning_daily_rollups",
         "lightning_events",
         "stations",
     }
-    assert version == "91f2c3d4e5f6"
+    assert version == "2b8d6f7a9c01"
 
 
 def test_cloud_rollup_migration_backfills_existing_hourly_data(
@@ -138,6 +139,18 @@ def test_cloud_rollup_migration_backfills_existing_hourly_data(
                 """
             )
         ).one()
+        normal = conn.execute(
+            text(
+                """
+                SELECT period, bucket, observed_count, mean_cloud_pct
+                FROM cloud_normals
+                WHERE period = 'month'
+                  AND bucket = 7
+                  AND source = 'smhi-metobs'
+                  AND source_version = '1.0'
+                """
+            )
+        ).one()
     engine.dispose()
 
     assert set(rows) == {"hour", "6h", "day", "week", "month", "year"}
@@ -148,6 +161,8 @@ def test_cloud_rollup_migration_backfills_existing_hourly_data(
     assert month.observed_count == 2
     assert month.expected_count == 744
     assert month.mean_cloud_pct == 50.0
+    assert normal.observed_count == 2
+    assert normal.mean_cloud_pct == 50.0
 
 
 def test_lightning_rollup_migration_backfills_existing_events(

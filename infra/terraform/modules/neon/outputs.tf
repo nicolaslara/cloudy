@@ -9,25 +9,52 @@
 # and inject the `+psycopg` driver, preserving query params (sslmode, etc.).
 
 locals {
-  # Neon requires TLS; the pooler host is the safer default for a serverless
-  # backend. Swap `database_host_pooler` -> `database_host` to use a direct
-  # connection instead.
-  _host = neon_project.this.database_host_pooler
-  _qs   = "sslmode=require"
+  # Neon requires TLS and exposes two hosts: a pgBouncer pooler and the direct
+  # compute endpoint. The pooler is the safer default for the serverless backend
+  # (it survives bursts of short-lived connections), so it backs `database_url`.
+  # The direct host backs `database_url_direct` for one-off bulk work — see that
+  # output's note.
+  _host        = neon_project.this.database_host_pooler
+  _host_direct = neon_project.this.database_host
+  _qs          = "sslmode=require"
+
+  _url_fmt = "postgresql+psycopg://%s:%s@%s/%s?%s"
 
   database_url = format(
-    "postgresql+psycopg://%s:%s@%s/%s?%s",
+    local._url_fmt,
     neon_project.this.database_user,
     neon_project.this.database_password,
     local._host,
     neon_project.this.database_name,
     local._qs,
   )
+
+  database_url_direct = format(
+    local._url_fmt,
+    neon_project.this.database_user,
+    neon_project.this.database_password,
+    local._host_direct,
+    neon_project.this.database_name,
+    local._qs,
+  )
 }
 
 output "database_url" {
-  description = "SQLAlchemy/psycopg connection string for the app's DATABASE_URL (postgresql+psycopg://...). Sensitive: contains the role password."
+  description = "SQLAlchemy/psycopg connection string for the app's DATABASE_URL (postgresql+psycopg://...). Pooled host. Sensitive: contains the role password."
   value       = local.database_url
+  sensitive   = true
+}
+
+output "database_url_direct" {
+  description = <<-EOT
+    Same credentials as database_url but pointed at Neon's DIRECT compute host
+    (no pgBouncer). Use this for the one-off historical backfill and other long,
+    transaction-heavy jobs: the pooler caps a transaction's lifetime and can
+    sever mid-COPY on multi-million-row loads, whereas the direct endpoint holds
+    a single long connection. The running app keeps using the pooled URL.
+    Sensitive: contains the role password.
+  EOT
+  value       = local.database_url_direct
   sensitive   = true
 }
 

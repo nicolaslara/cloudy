@@ -41,4 +41,9 @@ describe("toCloudChartOption", () => {
     const series = option.series as { data: (number | null)[] }[];
     expect(series[0]?.data).toEqual([50, null]);
   });
+
+  it("anchors the area to the frame edges instead of insetting half a bucket", () => {
+    const option = toCloudChartOption([cloudPoint()], "month");
+    expect(option.xAxis).toMatchObject({ boundaryGap: false });
+  });
 });

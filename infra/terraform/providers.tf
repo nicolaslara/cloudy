@@ -11,14 +11,16 @@ provider "neon" {
 }
 
 # Fly.io — manages the app shell, machines, and IPs for the backend container.
-# (Image build + migrate happen via `flyctl deploy`; see the backend_fly module.)
+# (Image build uses flyctl's remote builder; the roll + `cloudy migrate` are run
+# by Terraform itself on apply — see the backend_fly module.)
 provider "fly" {
   fly_api_token = var.fly_api_token
 }
 
-# Cloudflare — manages the Pages project (and optional custom domain) for the SPA.
+# Cloudflare — manages the Pages project, the R2 raw archive bucket, and
+# optional custom-domain DNS for the SPA.
 # account_id is passed per-resource in the frontend_pages module; the token here
-# must be scoped to that account (Pages + DNS edit).
+# must be scoped to that account (Pages + R2, plus DNS edit for custom domains).
 provider "cloudflare" {
   api_token = var.cloudflare_api_token
 }

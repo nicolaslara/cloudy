@@ -54,7 +54,8 @@ make dev-backend           # FastAPI on http://localhost:8400
 make dev-frontend          # (second terminal) Vite on http://localhost:5273
 ```
 
-Open http://localhost:5273/app//app//app/ — the page calls the API through the Vite dev proxy.
+Open http://localhost:5273/app/ — the app calls the API through the Vite dev
+proxy.
 API docs (when `API_DOCS=true`, the default): http://localhost:8400/docs
 Health check directly: `curl http://localhost:8400/api/v1/health` (reports DB
 status; degrades, never crashes, when Postgres is down).
@@ -155,4 +156,35 @@ Also: `make test`, `make lint`, `make typecheck`, `make fmt`, `make check-length
 
 ## Deploy
 
-Deploy scaffold lives in [`infra/README.md`](infra/README.md): Neon for Postgres, Fly.io for the FastAPI container, and Cloudflare Pages for the static frontend.
+The deploy runbook lives in [`infra/README.md`](infra/README.md): Neon for
+Postgres, Fly.io for the FastAPI container, and Cloudflare Pages for the static
+frontend, provisioned by one Terraform config in `infra/terraform/`.
+
+First production setup, in short:
+
+1. Fill `terraform.tfvars` (incl. `neon_org_id` and a **long-lived org-scoped**
+   Fly token from `fly tokens create org`, *not* `fly auth token`), and enable R2
+   on the Cloudflare account once.
+2. `terraform apply` in `infra/terraform/` — one apply creates Neon, the Fly app,
+   and Pages, and builds & pushes the backend image itself via flyctl's remote
+   builder (so `flyctl` must be installed; no manual image step).
+3. From your **workstation**, apply the schema and run the backfill against
+   Neon's **direct** (non-pooled) endpoint, replaying the local `data/raw`
+   archive — no SMHI re-download:
+
+```sh
+cd backend
+export DATABASE_URL="$(cd ../infra/terraform && terraform output -raw database_url_direct)"
+uv run cloudy migrate
+RAW_DATA_DIR=../data/raw uv run cloudy ingest-production full
+```
+
+4. `scripts/raw-archive.sh upload` so the scheduled ingest workflow can restore
+   the same archive from R2.
+
+The full history (~22M rows / several GB) needs a **paid Neon plan** — the Free
+plan's 512 MB cap is too small. See
+[`infra/README.md`](infra/README.md#first-production-setup) for the exact commands,
+token/endpoint gotchas, and sizing notes. Terraform provisions infrastructure;
+migrations run via Fly's `release_command` on every deploy, and data refresh is a
+separate scheduled/manual workflow (`.github/workflows/ingest.yml`).

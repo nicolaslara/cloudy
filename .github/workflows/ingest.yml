@@ -1,0 +1,68 @@
+name: ingest
+
+# Data refresh is intentionally separate from deploy. A code deploy should not
+# backfill years of SMHI data; this workflow is a manual/scheduled operations job.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "What to ingest"
+        type: choice
+        required: true
+        default: incremental
+        options:
+          - incremental
+          - smoke
+  schedule:
+    # Weekly refresh, off the hour to avoid the top-of-hour CI rush.
+    - cron: "17 3 * * 2"
+
+concurrency:
+  group: production-ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      # Use Neon's DIRECT (non-pooled) URL here, not the app's pooled one: this
+      # job runs bulk upserts and a read-heavy backtest, and the pgBouncer pooler
+      # can sever long transactions. (terraform output -raw database_url_direct)
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      RAW_ARCHIVE_BUCKET: ${{ vars.RAW_ARCHIVE_BUCKET || 'cloudy-raw' }}
+      RAW_DATA_DIR: ../data/raw
+      MODE: ${{ inputs.mode || 'incremental' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - name: Restore SMHI raw archive cache
+        uses: actions/cache@v4
+        with:
+          path: data/raw
+          key: smhi-raw-${{ github.run_id }}
+          restore-keys: |
+            smhi-raw-
+      - name: Check production database secret
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL secret is required for production ingestion." >&2
+            exit 1
+          fi
+      - name: Restore raw archive from R2
+        run: ../scripts/raw-archive.sh download
+        continue-on-error: true
+      - run: uv sync --locked
+      - name: Run ingest
+        run: uv run cloudy ingest-production "$MODE"
+      - name: Upload refreshed raw archive to R2
+        if: success()
+        run: ../scripts/raw-archive.sh upload

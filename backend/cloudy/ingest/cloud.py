@@ -11,6 +11,7 @@ import logging
 import time
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
+from functools import partial
 from pathlib import Path
 from typing import Literal
 
@@ -19,10 +20,12 @@ from sqlalchemy import Engine, delete, insert, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import Session, select
 
+from cloudy.climatology import cloud as cloud_climatology
 from cloudy.config import get_settings
 from cloudy.core.series_sql import ResolutionLabel, bucket_end_expr, bucket_start_expr
 from cloudy.core.units import normalize_cloud_pct
 from cloudy.db.models import CloudHourly, IngestRun, Station
+from cloudy.ingest.retry import with_reconnect
 
 logger = logging.getLogger(__name__)
 
@@ -251,6 +254,7 @@ def ingest_station(
     engine: Engine,
     station_id: int,
     period: Period = "corrected-archive",
+    refresh_normals: bool = True,
 ) -> StationResult:
     """Load one station period CSV. Archive replaces; latest-months upserts."""
     path, fetched = fetch_csv(station_id, period)
@@ -291,6 +295,9 @@ def ingest_station(
         "fetched" if fetched else "replay",
     )
     refresh_rollups(engine, station_id, SOURCE_VERSION)
+    if refresh_normals:
+        normal_rows = cloud_climatology.refresh_sweden_normals(engine, SOURCE, SOURCE_VERSION)
+        logger.info("cloud normals: refreshed %d Sweden-wide buckets", normal_rows)
     return StationResult(station_id=station_id, rows=len(rows), skipped=skipped, fetched=fetched)
 
 
@@ -320,9 +327,22 @@ def ingest_all_active(
     status, detail = "ok", ""
     try:
         for index, station in enumerate(active):
-            results.append(ingest_station(engine, station.id, period))
-            if index + 1 < len(active):
+            # One station = one idempotent transaction; reconnect and re-run it
+            # if Neon drops the connection partway through the backfill.
+            result = with_reconnect(
+                engine,
+                partial(ingest_station, engine, station.id, period, refresh_normals=False),
+                what=f"cloud {station.id}",
+            )
+            results.append(result)
+            if result.fetched and index + 1 < len(active):
                 time.sleep(delay_s)
+        normal_rows = with_reconnect(
+            engine,
+            lambda: cloud_climatology.refresh_sweden_normals(engine, SOURCE, SOURCE_VERSION),
+            what="cloud normals refresh",
+        )
+        logger.info("cloud normals: refreshed %d Sweden-wide buckets", normal_rows)
         detail = f"{sum(r.rows for r in results)} hours over {len(results)} stations"
     except Exception as exc:
         status = "failed"

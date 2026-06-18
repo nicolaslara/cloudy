@@ -75,6 +75,27 @@ a {
   font-size: 1.05rem;
 }
 
+.location-filter-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.clear-location {
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.clear-location:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
 .workspace {
   flex: 1;
   display: grid;

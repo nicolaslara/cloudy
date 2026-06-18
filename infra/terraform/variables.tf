@@ -55,6 +55,24 @@ variable "neon_pg_version" {
   default     = 16
 }
 
+variable "neon_org_id" {
+  description = "Neon organization id that owns the project. Required for org-scoped API keys (Neon's current default); leave empty for a legacy personal account. Find it via the Neon console -> Organization settings, or GET /api/v2/users/me/organizations."
+  type        = string
+  default     = ""
+}
+
+variable "neon_history_retention_seconds" {
+  description = "Point-in-time-restore window for the Neon branch. Free plans cap this at 21600s (6h) AND count retained history against the 512 MB storage limit, so on the free tier a shorter window leaves more room for live data; 0 disables PITR. Raise it on a paid plan for a real restore window."
+  type        = number
+  default     = 21600
+}
+
+variable "neon_autoscaling_max_cu" {
+  description = "Maximum Neon compute size (CUs) the endpoint may autoscale to under load. Min is fixed at 0.25 CU with scale-to-zero when idle, so this only adds cost while compute is busy. Default 0.25 = flat smallest footprint; raise it (e.g. 4) to let a historical backfill burst, after which compute settles back down on its own."
+  type        = number
+  default     = 0.25
+}
+
 variable "fly_region" {
   description = "Primary Fly.io region for the backend machine. `arn` (Stockholm) keeps the API next to its Swedish data and the Neon EU region."
   type        = string
@@ -67,19 +85,16 @@ variable "fly_org" {
   default     = "personal"
 }
 
-variable "backend_image" {
+variable "backend_image_label" {
   description = <<-EOT
-    Fully-qualified backend container image the Fly machine runs, e.g.
-    `registry.fly.io/cloudy-api:deployment-XXXX`. This is BUILT AND PUSHED BY
-    `flyctl deploy` (which reads backend/Dockerfile), not by Terraform — the
-    andrewbaxter/fly provider runs a pre-built image, it does not build one.
-    Leave at the default for the first `terraform apply` (a placeholder image so
-    the machine resource is well-formed); then run `flyctl deploy` to build,
-    push, run `cloudy migrate` as the release_command, and roll the real image.
-    See the backend_fly module and infra/terraform/README.md.
+    Base prefix for the backend image tag. Terraform appends a content hash of the
+    backend sources, so the effective tag is `<label>-<hash>` and every backend
+    change is rebuilt, migrated, and rolled onto the machine on `terraform apply`.
+    You don't bump this per release — the hash does that; change it only to
+    namespace builds (e.g. per environment).
   EOT
   type        = string
-  default     = "registry.fly.io/cloudy-api:latest"
+  default     = "tf-bootstrap"
 }
 
 variable "backend_min_machines_running" {
@@ -114,4 +129,26 @@ variable "frontend_custom_domain" {
   description = "Optional custom domain for the SPA (e.g. `cloudy.example.com`). Empty string disables custom-domain wiring; the *.pages.dev URL is always available."
   type        = string
   default     = ""
+}
+
+# ---------------------------------------------------------------------------
+# Raw data archive
+# ---------------------------------------------------------------------------
+
+variable "raw_archive_bucket_name" {
+  description = "Cloudflare R2 bucket for the SMHI raw archive. Empty = <project_slug>-raw."
+  type        = string
+  default     = ""
+}
+
+variable "raw_archive_bucket_location" {
+  description = "Best-effort R2 bucket location for the raw archive. `weur` keeps it in Western Europe."
+  type        = string
+  default     = "weur"
+}
+
+variable "raw_archive_bucket_jurisdiction" {
+  description = "R2 jurisdiction guarantee for the raw archive bucket."
+  type        = string
+  default     = "eu"
 }

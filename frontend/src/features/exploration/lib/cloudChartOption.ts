@@ -48,6 +48,10 @@ export function toCloudChartOption(
     xAxis: {
       type: "category",
       data: categories,
+      // No bars here, so anchor the curve to the frame edges (boundaryGap:false)
+      // rather than insetting it half a bucket on each side — the filled area
+      // should read as continuous coverage from the first bucket to the last.
+      boundaryGap: false,
       ...categoryAxisStyle((period) => tickLabel(period, resolution)),
     },
     yAxis: {

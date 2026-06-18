@@ -9,6 +9,7 @@ so it stays testable without a Postgres round-trip.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
 
@@ -23,15 +24,19 @@ from cloudy.db.models import Station
 # country into weather that has nothing to do with the target.
 DEFAULT_NEIGHBOURS = 5
 
-# Weekly mean cloud per station, keyed by the Monday of each ISO week. One query for
-# the whole country; we bucket into per-station dicts in Python. NULLs are excluded
-# from the mean, so a week with any readings still produces a value.
+# Weekly mean cloud per station, keyed by the Monday of each ISO week. We bucket into
+# per-station dicts in Python. NULLs are excluded from the mean, so a week with any
+# readings still produces a value. `{station_filter}` narrows the scan to a given set
+# of stations: a point estimate only needs its handful of nearest neighbours, and
+# scanning the whole ~10M-row archive to then discard 100+ stations is what made the
+# /predictions/spatial call seconds-slow on the serving DB.
 _WEEKLY_STATION_SQL = """
     SELECT station_id,
            date_trunc('week', ts_utc)::date AS week_start,
            avg(cloud_pct) AS mean_cloud
     FROM cloud_hourly
     WHERE cloud_pct IS NOT NULL
+      {station_filter}
     GROUP BY station_id, week_start
 """
 
@@ -49,11 +54,28 @@ class StationPoint:
     lon: float
 
 
-def load_weekly_station_cloud(engine: Engine) -> WeeklyByStation:
-    """Weekly-mean SMHI station cloud for every station, keyed by each ISO-week Monday."""
+def load_weekly_station_cloud(
+    engine: Engine, station_ids: Sequence[int] | None = None
+) -> WeeklyByStation:
+    """Weekly-mean SMHI station cloud, keyed by each ISO-week Monday.
+
+    Pass `station_ids` to load only those stations (the point estimators want just the
+    nearest neighbours); `None` keeps the all-stations load for any caller that truly
+    needs the whole country. An empty list is a no-op — no stations, no rows. Station
+    ids are our own ints, so they inline safely and sidestep the expanding-bindparam
+    dance an IN clause would otherwise need.
+    """
+    if station_ids is None:
+        station_filter = ""
+    elif len(station_ids) == 0:
+        return {}
+    else:
+        ids = ", ".join(str(int(i)) for i in station_ids)
+        station_filter = f"AND station_id IN ({ids})"
+    sql = _WEEKLY_STATION_SQL.format(station_filter=station_filter)
     by_station: WeeklyByStation = {}
     with engine.connect() as conn:
-        for row in conn.execute(text(_WEEKLY_STATION_SQL)):
+        for row in conn.execute(text(sql)):
             by_station.setdefault(row.station_id, {})[row.week_start] = float(row.mean_cloud)
     return by_station
 

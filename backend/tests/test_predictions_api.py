@@ -17,6 +17,7 @@ from sqlmodel import Session
 from cloudy.core import cache as cache_module
 from cloudy.db import session as db_session
 from cloudy.db.models import CloudHourly, LightningEvent
+from cloudy.ingest.cloud import refresh_rollups
 from cloudy.predictions.api import router
 
 STATION_ID = 98040
@@ -53,6 +54,10 @@ def client(stations_sample: Engine, monkeypatch: pytest.MonkeyPatch) -> Iterator
         session.add_all(cloud)
         session.add_all(strikes)
         session.commit()
+    # The cloud outlook reads the weekly serving rollups (not the raw hourly
+    # archive), so materialize them here exactly as ingest does — the same step
+    # the exploration Sweden tests perform after seeding hourly rows.
+    refresh_rollups(stations_sample, STATION_ID)
 
     app = FastAPI()
     app.include_router(router, prefix="/api/v1")
@@ -105,6 +110,10 @@ def test_outlook_returns_recent_gap_and_damped_leads(client: TestClient) -> None
 def test_outlook_sweden_wide_without_location(client: TestClient) -> None:
     body = client.get("/api/v1/predictions/outlook").json()
     assert body["scope"] == "sweden"
+    # The Sweden-wide series is pooled from the active stations' weekly rollups, so
+    # the seeded history surfaces here too (not just on the located path).
+    assert body["weeks_observed"] > 0
+    assert body["recent_anomaly_pct"] is not None
 
 
 @pytest.mark.parametrize(

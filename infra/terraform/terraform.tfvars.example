@@ -13,16 +13,27 @@
 # Neon API key: https://console.neon.tech -> Account settings -> API keys
 neon_api_key = "REPLACE_WITH_NEON_API_KEY"
 
-# Fly.io API token: `flyctl auth token`
-fly_api_token = "REPLACE_WITH_FLY_API_TOKEN"
+# Fly.io API token. Use a long-lived ORG token, NOT `fly auth token` (that mints
+# a short-lived personal macaroon the Terraform provider rejects for the org-level
+# GraphQL queries it needs, and it expires mid-deploy):
+#   fly tokens create org -o personal -n cloudy-terraform -x 8760h
+# Store the value WITHOUT the leading "FlyV1 " prefix. (CI/CD uses a separate
+# app-scoped DEPLOY token; see infra/README.md.)
+fly_api_token = "REPLACE_WITH_FLY_ORG_TOKEN"
 
-# Cloudflare API token scoped to your account with Pages:Edit
+# Cloudflare API token scoped to your account with Pages:Edit and R2:Edit
 # (and DNS:Edit only if you set a custom domain with a managed zone).
 cloudflare_api_token = "REPLACE_WITH_CLOUDFLARE_API_TOKEN"
 
 # Cloudflare account ID (not a secret, but account-specific).
 # Dashboard -> any domain -> Overview -> right sidebar "Account ID".
 cloudflare_account_id = "REPLACE_WITH_CLOUDFLARE_ACCOUNT_ID"
+
+# Neon organization id that owns the project. REQUIRED when your Neon API key is
+# org-scoped (the current Neon default); leave empty for a legacy personal
+# account. Find it in the Neon console -> Organization settings, or via
+# GET https://console.neon.tech/api/v2/users/me/organizations.
+neon_org_id = "REPLACE_WITH_NEON_ORG_ID"
 
 # --- Non-secret knobs (optional; defaults shown) ---------------------------
 
@@ -32,15 +43,28 @@ cloudflare_account_id = "REPLACE_WITH_CLOUDFLARE_ACCOUNT_ID"
 # fly_region     = "arn"                # Stockholm
 # fly_org        = "personal"
 
-# Backend image: leave default for the FIRST apply; flyctl deploy rolls the real
-# image afterward (Terraform ignores image drift). See README.md.
-# backend_image = "registry.fly.io/cloudy-api:latest"
+# Backend image: Terraform builds & pushes it for you on the first apply (via
+# flyctl's remote builder — flyctl must be installed). This is just the tag it
+# uses; bump it to force a rebuild. Day-2 image rolls go through flyctl deploy/CI.
+# backend_image_label = "tf-bootstrap"
 
 # backend_min_machines_running = 0      # 0 = scale-to-zero (cheapest)
 # backend_memory_mb = 512
 # backend_cpus = 1
 
+# Max Neon compute (CUs) under load. Min is fixed at 0.25 with scale-to-zero, so
+# this only adds cost while compute is busy. Default 0.25; raise it (e.g. 4) to
+# let the one-time historical backfill burst, then it settles back down.
+# neon_autoscaling_max_cu = 0.25
+
+# neon_history_retention_seconds = 21600  # 6h PITR window (Free plan cap)
+
 # pages_production_branch = "main"
+
+# Raw data archive bucket (optional). Empty/default creates <project_slug>-raw.
+# raw_archive_bucket_name = "cloudy-raw"
+# raw_archive_bucket_location = "weur"
+# raw_archive_bucket_jurisdiction = "eu"
 
 # Custom domain (optional). Leave empty to use the free *.pages.dev URL.
 # frontend_custom_domain = "cloudy.example.com"

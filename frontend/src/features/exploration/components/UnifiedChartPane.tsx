@@ -10,10 +10,9 @@ import { useECharts } from "../lib/useECharts";
 import { useChartZoomSync } from "../lib/useChartZoomSync";
 import { queryErrorMessage } from "../../../lib/apiErrorMessage";
 
-// Overlays lightning bars and the cloud curve on one shared time axis. Lightning
-// is the spine: the x-axis categories come from the lightning series, and if
-// there's no lightning to draw there's no chart at all (the cloud-only case
-// falls back to copy). Cloud is layered in only when present and `hasCloud`.
+// Overlays lightning bars and the cloud curve on one shared time axis. Either
+// source can be absent for a window; the other should still draw, with a note for
+// the missing layer rather than a blocking empty state.
 export function UnifiedChartPane({
   lightningData,
   cloudData,
@@ -57,13 +56,15 @@ export function UnifiedChartPane({
 }) {
   const lightningEmpty = lightningData !== undefined && lightningData.series.length === 0;
   const cloudEmpty = cloudData !== undefined && cloudData.series.length === 0;
+  const cloudHasRows = hasCloud && cloudData !== undefined && cloudData.series.length > 0;
+  const lightningHasRows = lightningData !== undefined && lightningData.series.length > 0;
 
   const lightningFilled = useMemo(
     () =>
-      lightningData && lightningData.series.length > 0
+      lightningData && (lightningData.series.length > 0 || cloudHasRows)
         ? zeroFill(lightningData.series, resolution, fetchFrom, fetchTo)
         : [],
-    [lightningData, resolution, fetchFrom, fetchTo],
+    [lightningData, cloudHasRows, resolution, fetchFrom, fetchTo],
   );
   const cloudFilled = useMemo(
     () =>
@@ -73,10 +74,12 @@ export function UnifiedChartPane({
     [cloudData, resolution, cloudQueryFrom, cloudQueryTo],
   );
 
-  // Lightning drives the axis: with no lightning points there's nothing to anchor
-  // the cloud curve against, so we bail to null (state copy) even if cloud exists.
+  const hasDrawableData = lightningHasRows || cloudHasRows;
+
+  // Lightning supplies the bucket grid, but an empty lightning response is still
+  // enough to make a zero-filled axis when cloud exists for the same window.
   const option = useMemo(() => {
-    if (lightningFilled.length === 0) return null;
+    if (!hasDrawableData || lightningFilled.length === 0) return null;
     return toUnifiedChartOption(
       lightningFilled,
       cloudFilled,
@@ -84,7 +87,7 @@ export function UnifiedChartPane({
       scale,
       hasCloud && cloudFilled.length > 0,
     );
-  }, [lightningFilled, cloudFilled, resolution, scale, hasCloud]);
+  }, [hasDrawableData, lightningFilled, cloudFilled, resolution, scale, hasCloud]);
 
   const { containerRef, chartRef, lastEmittedRef } = useECharts(
     option,
@@ -115,13 +118,15 @@ export function UnifiedChartPane({
           {queryErrorMessage(error, "Could not load history. Try again in a moment.")}
         </p>
       )}
-      {lightningEmpty && (
-        <p className="chart-state">
-          No lightning recorded for {scopeLabel} since 2015.
+      {lightningEmpty && !isPending && !error && (
+        <p className={cloudHasRows ? "chart-note" : "chart-state"}>
+          {cloudEmpty
+            ? `No lightning or cloud observations for ${scopeLabel} in this window.`
+            : `No lightning recorded for ${scopeLabel} in this window.`}
         </p>
       )}
-      {hasCloud && cloudEmpty && !cloudPending && !cloudError && (
-        <p className="chart-note">
+      {hasCloud && cloudEmpty && !lightningEmpty && !cloudPending && !cloudError && (
+        <p className={lightningHasRows ? "chart-note" : "chart-state"}>
           No cloud observations for {stationLabel} in this window.
         </p>
       )}

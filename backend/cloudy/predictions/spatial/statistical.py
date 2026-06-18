@@ -92,7 +92,11 @@ def estimate_statistical_normal(
     nearest = by_id[nearest_id]
     selected = neighbours[:1] if pool == NEAREST_MODEL else neighbours
 
-    station_weekly = features.load_weekly_station_cloud(engine)
+    # Load weekly history for only the stations we'll actually pool — never the whole
+    # country — so a single point estimate doesn't scan the entire cloud archive.
+    station_weekly = features.load_weekly_station_cloud(
+        engine, [station_id for station_id, _ in selected]
+    )
     # Each selected station's own week-of-year normal, then averaged across stations
     # (equal weight) per week — a station contributes to a week only where it has one.
     week_sum: dict[int, float] = {}

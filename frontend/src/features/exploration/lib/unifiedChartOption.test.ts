@@ -70,8 +70,23 @@ test("unified chart shows cloud and strikes without plotting lightning days as a
   expect(series[1]).toMatchObject({ type: "bar", yAxisIndex: 1 });
 });
 
+test("cloud rides an edge-to-edge twin x-axis while bars keep banded edges", () => {
+  const option = toUnifiedChartOption(LIGHTNING, CLOUD, "month");
+  const xAxes = option.xAxis as { boundaryGap?: boolean; show?: boolean }[];
+  // Axis 0 keeps the default banded gap so the first/last month's bars aren't
+  // sliced in half; axis 1 is the hidden full-width twin the cloud line rides.
+  expect(xAxes).toHaveLength(2);
+  expect(xAxes[0]?.boundaryGap).toBeUndefined();
+  expect(xAxes[1]).toMatchObject({ boundaryGap: false, show: false });
+
+  const cloud = (option.series as { name?: string; xAxisIndex?: number }[])[0];
+  expect(cloud).toMatchObject({ name: "Mean cloud cover", xAxisIndex: 1 });
+});
+
 test("unified chart omits cloud series when includeCloud is false", () => {
   const option = toUnifiedChartOption(LIGHTNING, CLOUD, "month", "linear", false);
   const series = option.series as { name?: string }[];
   expect(series.map((s) => s.name)).toEqual(["All discharges", "Cloud-to-ground"]);
+  // With no cloud line there's no second axis to keep around.
+  expect(option.xAxis as unknown[]).toHaveLength(1);
 });

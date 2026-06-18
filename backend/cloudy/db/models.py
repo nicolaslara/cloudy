@@ -167,3 +167,35 @@ class CloudRollup(SQLModel, table=True):
     p95_cloud_pct: float | None = None
     source: str = Field(default="smhi-metobs", max_length=32)
     source_version: str = Field(default="1.0", max_length=16)
+
+
+class CloudNormal(SQLModel, table=True):
+    """Materialized Sweden-wide cloud climatology for low-latency Normals reads."""
+
+    __tablename__ = "cloud_normals"
+    __table_args__ = (
+        Index("ix_cloud_normals_period_bucket", "period", "bucket"),
+        UniqueConstraint(
+            "source",
+            "source_version",
+            "period",
+            "bucket",
+            name="uq_cloud_normals_source_period_bucket",
+        ),
+    )
+
+    id: int | None = Field(default=None, primary_key=True)
+    period: str = Field(max_length=8, index=True)
+    bucket: int
+    mean_cloud_pct: float | None = None
+    p10_cloud_pct: float | None = None
+    p50_cloud_pct: float | None = None
+    p90_cloud_pct: float | None = None
+    clear_pct: float | None = None
+    partial_pct: float | None = None
+    overcast_pct: float | None = None
+    observed_count: int
+    year_count: int
+    source: str = Field(default="smhi-metobs", max_length=32)
+    source_version: str = Field(default="1.0", max_length=16)
+    generated_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))

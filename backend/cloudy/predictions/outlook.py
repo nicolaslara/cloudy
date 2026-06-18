@@ -75,16 +75,27 @@ LEADS = (1, 2)
 # rests on a real training span rather than a handful of lucky weeks.
 MIN_TRAIN_WEEKS = 104
 
-# Mean cloud percent per ISO week. `week_start` is the Monday of the ISO week, used
-# to lay the rows onto a gap-free calendar grid downstream. One row per observed ISO
-# week, chronological; weeks with no observation simply don't appear here.
+# Mean cloud percent per ISO week, served from the materialized weekly rollups
+# rather than re-scanned from the ~10M-row hourly archive. The outlook only needs
+# each week's *mean*, and a weekly rollup already stores it per station as
+# (mean_cloud_pct, observed_count) — so the pooled weekly mean is the exact
+# observation-weighted average `sum(mean·n)/sum(n)`, identical to averaging the raw
+# hours, but reading a few thousand rows instead of millions. This is the same
+# serving table (and weighting) the exploration Sweden view uses; the live hourly
+# scan was fine for one station but turned the default "all of Sweden" outlook into
+# a multi-second percentile-scale read. `week_start` is the Monday of the ISO week
+# (the rollup's canonical UTC bucket), used to lay the rows onto a gap-free calendar
+# grid downstream. Filtering to rows with real observations means a week with no
+# data simply doesn't appear — matching the old `avg() ... GROUP BY` behavior.
 _WEEKLY_CLOUD_SQL = """
     SELECT
-        date_trunc('week', ts_utc)::date AS week_start,
-        avg(cloud_pct) AS mean_cloud_pct
-    FROM cloud_hourly
+        (bucket_start AT TIME ZONE 'UTC')::date AS week_start,
+        sum(mean_cloud_pct * observed_count) / sum(observed_count) AS mean_cloud_pct
+    FROM cloud_rollups
     WHERE {station_filter}
-      AND cloud_pct IS NOT NULL
+      AND resolution = 'week'
+      AND mean_cloud_pct IS NOT NULL
+      AND observed_count > 0
     GROUP BY week_start
     ORDER BY week_start
 """

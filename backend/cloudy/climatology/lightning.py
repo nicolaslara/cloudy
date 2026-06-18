@@ -1,23 +1,41 @@
-"""Compute lightning normals for a coordinate within a radius.
+"""Compute lightning normals for a coordinate within a radius, or all of Sweden.
 
-Lightning is never modelled at a point — a strike lands in an *area* — so every
-query carries a radius (10 or 25 km) and counts discharges from `lightning_events`
-using the same bbox-prefilter-then-exact-haversine pattern as the exploration
-raw path. The shared filter SQL lives in core.series_sql so the radius geometry
-can never drift between the two readers.
+Lightning is never modelled at a point — a strike lands in an *area* — so a
+located query carries a radius (10 or 25 km), and the Sweden-wide view is just the
+whole-country bounding box with the radius refinement switched off. Either way we
+count discharges straight from `lightning_events` using the same
+bbox-prefilter-then-exact-haversine pattern as the exploration raw path; the
+shared filter SQL lives in core.series_sql so the radius geometry can never drift
+between the two readers.
 
 The unit of the climatology is the **lightning day**: a calendar day with at
-least one discharge inside the radius. That mirrors SMHI's thunder-day maps and
-keeps the headline metric robust to the wild per-storm variance in raw counts.
+least one discharge in scope. That mirrors SMHI's thunder-day maps and keeps the
+headline metric robust to the wild per-storm variance in raw counts.
 
   strike_day_probability[slot] = lightning-days in slot / observed days in slot
   expected_lightning_days[slot] = lightning-days / occurrences of the slot
 
 The denominator — "observed days" — is the number of real calendar days that
 fall in the slot across the span we actually hold data for. We derive that span
-from the radius-filtered events themselves (min/max day), so a probability is
-always days-with-strikes over days-we-could-have-seen-strikes, never inflated by
+from the filtered events themselves (min/max day), so a probability is always
+days-with-strikes over days-we-could-have-seen-strikes, never inflated by
 pretending we have coverage we don't.
+
+Performance note: the Sweden-wide query scans the whole event archive, the one
+slow read here (a few seconds cold). We deliberately keep it a live scan behind
+the route's one-hour response cache rather than precomputing it. An earlier
+revision added a materialized `lightning_normals` table (refreshed on ingest, the
+twin of `cloud_normals`); it worked, but it cost a table, a migration, a refresh
+step and a second read path to shave ~10ms off an already-cached request — too
+much machinery for too little. If cold-cache latency ever bites, the cheaper next
+step is to warm (or invalidate) the cache right after each ingest; only if that
+isn't enough should the precomputed table come back. Cloud makes the opposite call
+(it does materialize its Sweden normal) for reasons that don't apply here: its
+percentile scan runs ~6s/period over ~10M hourly rows, it's paid once *per period*,
+and it backs the default landing view where a cold first paint is unacceptable.
+Lightning's Sweden scan is ~2s over ~4M events on a secondary view — well inside
+what the response cache absorbs. The `lightning_daily_rollups` table stays purely
+an exploration serving concern; the normals path no longer reads it.
 
 `now` is passed in (UTC at the route) so the current-month blend is testable.
 """
@@ -105,7 +123,9 @@ def compute(
     else:
         # No location: all of Sweden. The Sweden bbox with no radius makes the
         # haversine clause short-circuit (use_radius = false), so every event in
-        # the country counts — the radius is irrelevant and reported as null.
+        # the country counts — the radius is irrelevant and reported as null. This
+        # is the slow read (a full-archive scan) but the route caches it for an
+        # hour; see the module docstring for why we don't precompute it.
         bounds = SpatialBounds.sweden()
         scope = "sweden"
         lat = lon = None

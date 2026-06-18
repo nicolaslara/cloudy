@@ -34,8 +34,13 @@ def test_statistical_normal_nearest_uses_only_the_closest_station(
     values = {1: 40.0, 2: 50.0, 3: 60.0, 4: 70.0, 5: 80.0, 6: 90.0}
     week_start = date(2021, 1, 4)  # a Monday, ISO week 1
     weekly = {sid: {week_start: values[sid]} for sid in values}
+    requested: dict[str, object] = {}
     monkeypatch.setattr(features, "load_active_points", lambda engine: _POINTS)
-    monkeypatch.setattr(features, "load_weekly_station_cloud", lambda engine: weekly)
+    monkeypatch.setattr(
+        features,
+        "load_weekly_station_cloud",
+        lambda engine, station_ids=None: (requested.update(ids=station_ids), weekly)[1],
+    )
 
     order = features.nearest_station_neighbours(_POINTS, 59.0, 18.0)
     result = statistical.estimate_statistical_normal(
@@ -49,6 +54,8 @@ def test_statistical_normal_nearest_uses_only_the_closest_station(
     assert [p.week for p in result.series] == [1]
     assert result.series[0].estimated_cloud_pct == round(values[order[0][0]], 1)
     assert result.nearest_station.station_id == order[0][0]
+    # nearest loads exactly the one closest station, not the whole country.
+    assert requested["ids"] == [order[0][0]]
 
 
 def test_statistical_normal_knn_averages_the_neighbours_equally(
@@ -60,8 +67,13 @@ def test_statistical_normal_knn_averages_the_neighbours_equally(
     values = {1: 40.0, 2: 50.0, 3: 60.0, 4: 70.0, 5: 80.0, 6: 90.0}
     week_start = date(2021, 1, 4)
     weekly = {sid: {week_start: values[sid]} for sid in values}
+    requested: dict[str, object] = {}
     monkeypatch.setattr(features, "load_active_points", lambda engine: _POINTS)
-    monkeypatch.setattr(features, "load_weekly_station_cloud", lambda engine: weekly)
+    monkeypatch.setattr(
+        features,
+        "load_weekly_station_cloud",
+        lambda engine, station_ids=None: (requested.update(ids=station_ids), weekly)[1],
+    )
 
     order = features.nearest_station_neighbours(_POINTS, 59.0, 18.0)  # k=5 of the 6 points
     result = statistical.estimate_statistical_normal(
@@ -74,6 +86,8 @@ def test_statistical_normal_knn_averages_the_neighbours_equally(
     assert result.n_neighbours == len(order) == 5
     expected = round(sum(values[sid] for sid, _ in order) / len(order), 1)
     assert result.series[0].estimated_cloud_pct == expected
+    # kNN loads exactly the k selected neighbours (not the 6th, farther station).
+    assert requested["ids"] == [sid for sid, _ in order]
 
 
 def test_statistical_normal_raises_without_neighbour_history(
@@ -81,7 +95,9 @@ def test_statistical_normal_raises_without_neighbour_history(
 ) -> None:
     """No cloud for any neighbour is a precondition (LookupError -> 503), not an empty 200."""
     monkeypatch.setattr(features, "load_active_points", lambda engine: _POINTS)
-    monkeypatch.setattr(features, "load_weekly_station_cloud", lambda engine: {})
+    monkeypatch.setattr(
+        features, "load_weekly_station_cloud", lambda engine, station_ids=None: {}
+    )
     with pytest.raises(LookupError, match="no neighbour cloud history"):
         statistical.estimate_statistical_normal(
             None,  # type: ignore[arg-type]

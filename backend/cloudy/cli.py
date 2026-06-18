@@ -53,6 +53,16 @@ def main() -> None:
         "backtest",
         help="evaluate the weekly outlook across all stations; write the static benchmark to disk",
     )
+    production_ingest = subparsers.add_parser(
+        "ingest-production",
+        help="run the production smoke, full, or incremental data refresh workflow",
+    )
+    production_ingest.add_argument(
+        "mode",
+        choices=["smoke", "full", "incremental"],
+        nargs="?",
+        default="full",
+    )
 
     args = parser.parse_args()
     if args.command in {"migrate", "create-db"}:
@@ -67,6 +77,10 @@ def main() -> None:
         run_ingest(parser, args)
     elif args.command == "backtest":
         run_backtest()
+    elif args.command == "ingest-production":
+        from cloudy.production_ingest import run
+
+        run(args.mode)
     elif args.command == "serve":
         uvicorn.run(
             "cloudy.api:create_app",
@@ -87,7 +101,8 @@ def run_backtest() -> None:
     from cloudy.predictions import evaluate
 
     configure_logging(get_settings().log_level)
-    artifact = evaluate.evaluate(get_engine())
+    engine = get_engine()
+    artifact = evaluate.evaluate(engine)
     path = Path(get_settings().predictions_scorecard_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(artifact, indent=2), encoding="utf-8")

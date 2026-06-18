@@ -92,6 +92,17 @@ def test_sweden_wide_pools_active_stations(stations_sample: Engine) -> None:
         )
         session.commit()
 
+    assert cloud.refresh_sweden_normals(stations_sample) == 3
+    with Session(stations_sample) as session:
+        session.add(
+            CloudHourly(
+                station_id=first,
+                ts_utc=datetime(2020, 7, 2, 0, tzinfo=UTC),
+                cloud_pct=100.0,
+            )
+        )
+        session.commit()
+
     body = cloud.compute(
         stations_sample, ClimatologyCloudQuery(period="month"), datetime(2022, 1, 15, tzinfo=UTC)
     )
@@ -99,7 +110,7 @@ def test_sweden_wide_pools_active_stations(stations_sample: Engine) -> None:
     assert body["station"] is None
     assert body["station_count"] == len(active)
     july = {p["period"]: p for p in body["series"]}["7"]
-    assert july["mean_cloud_pct"] == 50.0  # pooled mean of 20 and 80
+    assert july["mean_cloud_pct"] == 50.0  # read from the refreshed materialized normal
 
 
 def test_monthly_normal_reports_sky_state_shares(stations_sample: Engine) -> None:

@@ -158,6 +158,38 @@ test("renders Sweden-wide without a selected location", async () => {
   expect(await screen.findByText("Source: SMHI")).toBeInTheDocument();
 });
 
+test("unified chart still renders cloud when lightning is empty", async () => {
+  mockLightningAndCloud({
+    ...SERIES_RESPONSE,
+    series: [],
+    meta: { ...SERIES_RESPONSE.meta, total_matched: 0, returned: 0, point_count: 0 },
+  });
+
+  renderExplorer(null);
+
+  expect(await screen.findByText(/no lightning recorded.*in this window/i)).toBeInTheDocument();
+  expect(await screen.findByText(/cloud from sweden-wide station aggregate/i)).toBeInTheDocument();
+  const chartOption = lastChartOption();
+  expect(chartOption).not.toBeNull();
+  expect(chartOption?.series?.length).toBeGreaterThan(0);
+});
+
+test("unified chart still renders lightning when cloud is empty", async () => {
+  mockLightningAndCloud(SERIES_RESPONSE, {
+    ...SWEDEN_CLOUD_RESPONSE,
+    series: [],
+    meta: { ...SWEDEN_CLOUD_RESPONSE.meta, total_matched: 0, returned: 0, point_count: 0 },
+  });
+
+  renderExplorer(null);
+
+  expect(await screen.findByText(/no cloud observations.*in this window/i)).toBeInTheDocument();
+  expect(screen.queryByText(/no lightning recorded/i)).not.toBeInTheDocument();
+  const chartOption = lastChartOption();
+  expect(chartOption).not.toBeNull();
+  expect(chartOption?.series?.length).toBeGreaterThan(0);
+});
+
 test("requests series format with Sweden scope when no location is selected", async () => {
   const fetchMock = vi
     .spyOn(globalThis, "fetch")
@@ -322,17 +354,27 @@ test("dragging the shared time slider marks the visible range as custom", async 
   expect(screen.getByText("2015-01-01 — 2026-06-30")).toBeInTheDocument();
 });
 
-function mockLightningAndCloud(lightningBody = SERIES_RESPONSE) {
+function mockLightningAndCloud(
+  lightningBody = SERIES_RESPONSE,
+  swedenCloudBody = SWEDEN_CLOUD_RESPONSE,
+) {
   return vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
     const url = String(input);
     if (url.includes("/api/v1/exploration/cloud")) {
       return new Response(
-        JSON.stringify(url.includes("lat=") ? CLOUD_RESPONSE : SWEDEN_CLOUD_RESPONSE),
+        JSON.stringify(url.includes("lat=") ? CLOUD_RESPONSE : swedenCloudBody),
         { status: 200 },
       );
     }
     return new Response(JSON.stringify(lightningBody), { status: 200 });
   });
+}
+
+function lastChartOption(): { series?: unknown[] } | null | undefined {
+  return [...useEChartsMock.mock.calls].reverse().find((call) => call[3] === "chart")?.[0] as
+    | { series?: unknown[] }
+    | null
+    | undefined;
 }
 
 function lastChartStructureKey(): string | undefined {

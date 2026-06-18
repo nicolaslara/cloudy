@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy import Engine, func
 from sqlmodel import Session, select
 
-from cloudy.db.models import CloudHourly
+from cloudy.db.models import CloudHourly, CloudNormal
 from cloudy.ingest import cloud
 
 FIXTURE = Path(__file__).parent / "fixtures" / "metobs-cloud-98040-sample.csv"
@@ -79,4 +79,56 @@ def test_ingest_station_is_idempotent(
     assert first.rows == second.rows == 10
     with Session(stations_sample) as session:
         count = session.exec(select(func.count()).select_from(CloudHourly)).one()
+        normal_count = session.exec(select(func.count()).select_from(CloudNormal)).one()
     assert count == 10
+    assert normal_count > 0
+
+
+def test_ingest_all_active_does_not_sleep_after_replay(
+    stations_sample: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sleeps: list[float] = []
+
+    def replay(
+        _engine: Engine,
+        station_id: int,
+        period: cloud.Period = "corrected-archive",
+        refresh_normals: bool = True,
+    ) -> cloud.StationResult:
+        assert period == "corrected-archive"
+        assert refresh_normals is False
+        return cloud.StationResult(station_id=station_id, rows=10, skipped=0, fetched=False)
+
+    monkeypatch.setattr(cloud, "ingest_station", replay)
+    monkeypatch.setattr("cloudy.ingest.cloud.time.sleep", sleeps.append)
+
+    results = cloud.ingest_all_active(stations_sample)
+
+    assert len(results) > 1
+    assert sleeps == []
+
+
+def test_ingest_all_active_keeps_delay_after_fetch(
+    stations_sample: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sleeps: list[float] = []
+    calls = 0
+
+    def fetch_first(
+        _engine: Engine,
+        station_id: int,
+        period: cloud.Period = "corrected-archive",
+        refresh_normals: bool = True,
+    ) -> cloud.StationResult:
+        nonlocal calls
+        assert refresh_normals is False
+        calls += 1
+        return cloud.StationResult(station_id=station_id, rows=10, skipped=0, fetched=calls == 1)
+
+    monkeypatch.setattr(cloud, "ingest_station", fetch_first)
+    monkeypatch.setattr("cloudy.ingest.cloud.time.sleep", sleeps.append)
+
+    results = cloud.ingest_all_active(stations_sample, delay_s=0.25)
+
+    assert len(results) > 1
+    assert sleeps == [0.25]
