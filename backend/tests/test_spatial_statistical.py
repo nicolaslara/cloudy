@@ -95,9 +95,7 @@ def test_statistical_normal_raises_without_neighbour_history(
 ) -> None:
     """No cloud for any neighbour is a precondition (LookupError -> 503), not an empty 200."""
     monkeypatch.setattr(features, "load_active_points", lambda engine: _POINTS)
-    monkeypatch.setattr(
-        features, "load_weekly_station_cloud", lambda engine, station_ids=None: {}
-    )
+    monkeypatch.setattr(features, "load_weekly_station_cloud", lambda engine, station_ids=None: {})
     with pytest.raises(LookupError, match="no neighbour cloud history"):
         statistical.estimate_statistical_normal(
             None,  # type: ignore[arg-type]
