@@ -10,10 +10,7 @@ baselines.
 The app surface lives under `/app/`; the root presentation page is added separately.
 
 > This file is the **product source of truth**. When docs conflict, `project.md`
-> and the design stances below win. `AGENTS.md` is the operating manual;
-> `WORKING.md` is the loop; `TASKS.md` chooses the active workpad. The full
-> hand-off brief (original task + modeling background + method catalog) is
-> `docs/local/brief.md`.
+> and the design stances below win.
 
 ---
 
@@ -67,8 +64,8 @@ These come from the brief and the owner's direction; they override convenience.
    serves traffic.
 
 3. **Data-source facts are verified and dated.** SMHI APIs drift and deprecate
-   (SNOW1gv1 replaced PMP3gv2; Mesan2gv3 is replacing Mesan2gv2 — see
-   `docs/local/brief.md`, facts as of ~Sep 2025). Every endpoint, parameter, grid
+   (SNOW1gv1 replaced PMP3gv2; Mesan2gv3 is replacing Mesan2gv2; facts as of
+   ~Sep 2025). Every endpoint, parameter, grid
    detail, and license we rely on is recorded with an observation date, and all
    schema knowledge for a source lives behind one ingestion boundary, so an
    API change is a one-module fix.
@@ -81,7 +78,7 @@ These come from the brief and the owner's direction; they override convenience.
 5. **Simplicity is a top-level rule for the code itself.** Code must always be
    easy to read and understand: good separation of concerns, one conceptual
    responsibility per file, and no oversized files (aim ~200–400 LOC per
-   module; 600+ is a refactor-soon warning — see `WORKING.md`). When a clever
+   module; 600+ is a refactor-soon warning). When a clever
    solution and a boring readable one both work, the boring one wins.
 
 6. **Treat this as a production system from day one.** Proper error handling,
@@ -105,8 +102,7 @@ These come from the brief and the owner's direction; they override convenience.
   shown against the historical baseline with the revision delta.
 - **Later overlays:** SNOW 10-day forecast on the charts; model confidence /
   probability bands; model-vs-baseline leaderboard.
-- **API:** chart-ready JSON series per view (shapes sketched in
-  `docs/local/brief.md`, ratified in the web-architecture workpad).
+- **API:** chart-ready JSON series per view, one shape per dataset.
 
 ### Data serving and level of detail (locked 2026-06-12)
 
@@ -207,10 +203,9 @@ What the Normals product answers and how (locked 2026-06-14):
 
 ---
 
-## Core modeling definitions (distilled from `docs/local/brief.md`)
+## Core modeling definitions
 
-Recommended defaults, seeded from the brief — confirm in the web-architecture
-workpad before they harden:
+Recommended defaults for the core modeling choices:
 
 - **Time:** internal time is **UTC**; display timezone **Europe/Stockholm**.
   The daily boundary choice (UTC vs local day) is documented, not implicit.
@@ -256,15 +251,14 @@ labels, and evals the AI version needs. The progression: climatology →
 AI learns the combination → calibrated ensemble blends by
 horizon/location/season. Both versions share one evaluation framework and one
 leaderboard; every served prediction stores its component models + weights.
-Full mechanics: `docs/local/mental-model.md`.
 
 ---
 
-## Phases (gated; see `workpads/WORKPADS.md` for the active pads)
+## Phases (gated)
 
 | # | Phase | "Done" means |
 | --- | --- | --- |
-| 1 | **foundation** | The webapp works well **locally**: address → location mapping, historical SMHI cloud + lightning ingestion into the SQL store, daily/monthly/yearly aggregations, simple climatology predictions, and day/month/year visualizations in the browser. Stack and schema are locked via the `web-architecture` workpad gate. |
+| 1 | **foundation** | The webapp works well **locally**: address → location mapping, historical SMHI cloud + lightning ingestion into the SQL store, daily/monthly/yearly aggregations, simple climatology predictions, and day/month/year visualizations in the browser. |
 | 2 | **deploy** | The local app is deployed **simply** with basic CI/CD (GitHub Actions). Cloudflare is the candidate to research — the React-static + Python-backend split may complicate a pure-Cloudflare story; that's a research question, not a decision. Terraform is optional/nice-to-have (the original task mentions it; the owner prefers simple). |
 | 3 | **non-ai-predictions** | Predictions beat raw climatology without ML: recent-residual correction, SNOW + climatology blending by horizon, analog forecasting, Poisson/negative-binomial (and zero-inflated) lightning count models, hand-weighted ensembles — all validated by rolling backtests against the climatology baseline, with a first evaluation view. |
 | 4 | **ai-predictions** | The fun part, where most energy goes: gradient boosting (LightGBM-class quantile cloud models, calibrated lightning classifiers + count models) inside a calibration-and-blending architecture — feature store, model registry, rolling-origin backtests, skill scores vs the Phase-1/3 baselines, drift monitoring, explainable blends. **No AI model ships unless it beats the non-AI baselines on the right metric.** |
@@ -286,13 +280,12 @@ the current-month expectation is intentionally deferred.
 
 ## Data sources (SMHI open data — all facts must be re-verified)
 
-> The brief's API facts derive from SMHI announcements around **September
-> 2025** and Arctic-SDI catalog records (see `docs/local/brief.md` with links).
-> SNOW1gv1 replaced PMP3gv2 (PMP3gv2 deprecation was scheduled 2026-03-31);
-> Mesan2gv3 replaces Mesan2gv2 (Mesan2gv2 deprecation scheduled 2026-11-01).
-> **Verify current endpoint paths, parameters, grids, and licenses before any
-> ingestion code** — this is the first deliverable of the `web-architecture`
-> workpad. Record observation dates next to every verified fact.
+> These API facts derive from SMHI announcements around **September 2025** and
+> Arctic-SDI catalog records. SNOW1gv1 replaced PMP3gv2 (PMP3gv2 deprecation was
+> scheduled 2026-03-31); Mesan2gv3 replaces Mesan2gv2 (Mesan2gv2 deprecation
+> scheduled 2026-11-01). **Verify current endpoint paths, parameters, grids, and
+> licenses before any ingestion code.** Record observation dates next to every
+> verified fact.
 
 - **MESAN (Mesan2gv3)** — hourly gridded meteorological analysis. Old Mesan2gv2
   grid was ~2.8 km; Mesan2gv3 uses a new grid — exact resolution unknown,

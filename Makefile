@@ -48,6 +48,6 @@ check-length:
 ci:  # run the GitHub Actions workflow locally (needs act + docker)
 	act push --container-architecture linux/arm64
 
-coverage:  # informational, no threshold (policy: WORKING.md Verification)
+coverage:  # informational, no threshold
 	cd backend && uv run pytest --cov=cloudy --cov-report=term-missing
 	cd frontend && pnpm vitest run --coverage

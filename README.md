@@ -7,13 +7,12 @@ climatology baseline → non-AI statistical models → AI/ML models. Probabilist
 radius-aware for lightning, and benchmark-driven from day one: every model must
 beat the climatology baseline on a stated metric.
 
-> Humans start here. Agents start at [`AGENTS.md`](./AGENTS.md).
-
 ## Status
 
-**Foundation in progress (2026-06-11).** Local stack works: geocoding, lightning +
-cloud history charts, map explorer. Postgres + SMHI ingest via `cloudy ingest`.
-Climatology (Averages view) and deploy are next.
+Local stack works end to end: geocoding, cloud + lightning exploration (charts +
+map), the **Normals** climatology view (the headline deliverable), and a
+damped-persistence weekly **outlook**. Postgres + SMHI ingest via `cloudy ingest`;
+the deploy scaffold (Neon + Fly.io + Cloudflare Pages) lives in `infra/`.
 
 ## Planned phases
 
@@ -34,13 +33,11 @@ Climatology (Averages view) and deploy are next.
 
 | Path | Role |
 |---|---|
-| [`AGENTS.md`](./AGENTS.md) | Orchestration brain — agent entrypoint, workflow, rules |
-| [`project.md`](./project.md) | Product source of truth — vision, stances, phases, data contracts |
-| [`TASKS.md`](./TASKS.md) | User-edited queue; determines the active workpad |
-| [`WORKING.md`](./WORKING.md) | Execution loop, gates, verification, review lenses |
-| `docs/local/brief.md` | Original hand-off brief (`docs/` is entirely gitignored for now) |
-| `docs/local/guide/` | HTML project guide — the local review index, kept current as the project moves |
-| `workpads/` | **Gitignored** — local-only working state; durable knowledge gets promoted into `project.md` / the local guide |
+| [`project.md`](./project.md) | Product source of truth — vision, design stances, phases, data contracts |
+| `backend/` | FastAPI service: the `cloudy` package (ingest, exploration, climatology, predictions), Alembic migrations, tests |
+| `frontend/` | Vite + React + TypeScript SPA, served at `/app/` |
+| `infra/` | Terraform for Neon + Fly.io + Cloudflare Pages, plus the deploy runbook ([`infra/README.md`](infra/README.md)) |
+| `Makefile`, `docker-compose.yml` | Local dev: Postgres 18 plus the `dev`/`test`/`lint`/`typecheck` targets |
 
 ## Try it
 

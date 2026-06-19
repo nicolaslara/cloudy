@@ -4,7 +4,7 @@ Every observation/rollup row carries (source, source_version) and they are part
 of each natural-key UniqueConstraint: that's what lets us re-ingest one source
 version idempotently and keep distinct sources side by side without mixing them
 in a single chart. Timestamp columns are all timezone-aware (UTC); see the
-data-modeling rules in AGENTS.md.
+core modeling definitions in project.md.
 """
 
 from datetime import date, datetime
