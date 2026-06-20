@@ -21,9 +21,7 @@ _POINTS = [
 ]
 
 
-def _inverse_distance_mean(
-    neighbours: list[tuple[int, float]], values: dict[int, float]
-) -> float:
+def _inverse_distance_mean(neighbours: list[tuple[int, float]], values: dict[int, float]) -> float:
     """The estimate the shipped kNN should produce: each neighbour's value weighted by
     1/distance (floored at 1 km), so the nearest neighbour counts most."""
     weights = {sid: 1.0 / max(distance, 1.0) for sid, distance in neighbours}
