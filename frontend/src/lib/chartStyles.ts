@@ -31,7 +31,7 @@ export const CLOUD_LINE = "#5b76c9";
 export const CLOUD_AREA_SOLO = "rgba(91, 118, 201, 0.18)";
 export const CLOUD_AREA_OVERLAY = "rgba(91, 118, 201, 0.12)";
 
-// The kNN-average overlay (the equal-weight mean of the nearest stations' observed
+// The kNN overlay (the inverse-distance-weighted mean of the nearest stations' observed
 // normals) needs its own hue, distinct from the blue nearest-station bars so the two
 // read apart at a glance. A muted teal-green sits clearly against the blue without
 // clashing.

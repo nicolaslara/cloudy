@@ -31,7 +31,7 @@ const PERIOD: NormalsPeriod = "month";
 const LIGHTNING_RADII: RadiusKm[] = [10, 25];
 const CLOUD_RADII: CloudRadiusKm[] = [50, 100];
 
-// The point estimator overlaid on the station-normal bars: the kNN average, with its
+// The point estimator overlaid on the station-normal bars: the inverse-distance kNN, with its
 // own line colour. The bars themselves are the "Nearest station" rung, so they aren't
 // repeated as a line; the two read as one toggleable set in the legend.
 const OVERLAY_MODELS: { model: CloudModel; color: string }[] = [
@@ -144,8 +144,8 @@ export function NormalsView({ selected }: { selected: Candidate | null }) {
         {sourceNote && <p className="normals-source">{sourceNote}</p>}
         {selected && (
           <p className="normals-source">
-            Bars are the nearest-station normal; the line overlays the kNN average — the
-            equal-weight mean of the nearest stations' observed normals — at your exact point. Click
+            Bars are the nearest-station normal; the line overlays the kNN estimate — the
+            inverse-distance-weighted mean of the nearest stations' observed normals — at your exact point. Click
             a legend entry to toggle a curve.
             {knnEstimate.isPending && " Estimating at your point…"}
           </p>

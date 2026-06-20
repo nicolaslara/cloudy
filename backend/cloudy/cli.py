@@ -53,6 +53,10 @@ def main() -> None:
         "backtest",
         help="evaluate the weekly outlook across all stations; write the static benchmark to disk",
     )
+    subparsers.add_parser(
+        "spatial-backtest",
+        help="leave-station-out benchmark of the spatial GBM vs kNN; write the scorecard to disk",
+    )
     production_ingest = subparsers.add_parser(
         "ingest-production",
         help="run the production smoke, full, or incremental data refresh workflow",
@@ -77,6 +81,8 @@ def main() -> None:
         run_ingest(parser, args)
     elif args.command == "backtest":
         run_backtest()
+    elif args.command == "spatial-backtest":
+        run_spatial_backtest()
     elif args.command == "ingest-production":
         from cloudy.production_ingest import run
 
@@ -107,6 +113,36 @@ def run_backtest() -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(artifact, indent=2), encoding="utf-8")
     print(f"wrote weekly-outlook benchmark ({artifact['n_stations']} stations) to {path}")
+
+
+def run_spatial_backtest() -> None:
+    import json
+    from pathlib import Path
+
+    from cloudy.db.session import get_engine
+    from cloudy.logging import configure_logging
+
+    settings = get_settings()
+    configure_logging(settings.log_level)
+    try:
+        # Imported here, not at module load: the benchmark's deps (lightgbm/pandas/numpy)
+        # are dev-only, so a production install without them never trips on this command.
+        from cloudy.predictions.spatial.benchmark import evaluate
+
+        artifact = evaluate.spatial_scorecard(get_engine())
+    except ImportError as exc:
+        raise SystemExit(
+            "spatial-backtest needs the benchmark deps (lightgbm/pandas/numpy). "
+            "Install the dev group with `uv sync`."
+        ) from exc
+    path = Path(settings.spatial_scorecard_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(artifact, indent=2), encoding="utf-8")
+    gbm = next(e for e in artifact["normal_task"]["estimators"] if e["id"] == "gbm")
+    print(
+        f"wrote spatial benchmark ({artifact['n_stations']} stations, "
+        f"GBM normal median MAE {gbm['median_mae']} pp) to {path}"
+    )
 
 
 def run_ingest(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:

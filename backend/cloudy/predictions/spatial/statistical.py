@@ -7,8 +7,9 @@ teacher source:
 
   - ``NEAREST_MODEL`` quotes the single closest station's own week-of-year normal —
     the product's honest "nearest station, X km away", made into a curve.
-  - ``KNN_MODEL`` averages the k nearest stations' normals with equal weight per
-    station, so no single neighbour dominates a week it happens to cover.
+  - ``KNN_MODEL`` blends the k nearest stations' normals, weighting each by inverse
+    distance so a closer station counts more — which beat a plain equal-weight average
+    on the leave-station-out benchmark (see ``predictions/spatial/benchmark``).
 
 Both reuse the same neighbour selection (`features.nearest_station_neighbours`) so
 the two estimates are drawn from the same stations and read as a progression. Each
@@ -28,8 +29,9 @@ from cloudy.predictions.spatial import features
 
 # The two statistical ways to estimate the week-of-year normal at a point: NEAREST is
 # the single closest station's normal (the most basic point estimate), KNN is the
-# equal-weight average of the k nearest stations' normals. Both reuse the same
-# neighbour selection so the estimates are drawn from the same stations.
+# inverse-distance-weighted average of the k nearest stations' normals (a closer
+# station counts more). Both reuse the same neighbour selection so the estimates are
+# drawn from the same stations.
 NEAREST_MODEL = "nearest"
 KNN_MODEL = "knn"
 # Every spatial-normal estimator the /predictions/spatial route can serve, increasing
@@ -75,8 +77,8 @@ def estimate_statistical_normal(
 
       - ``NEAREST_MODEL`` uses only the single closest station — the most basic "what
         does the nearest place look like" estimate.
-      - ``KNN_MODEL`` averages the k nearest stations' week-of-year normals with equal
-        weight per station, so no single neighbour dominates a week it happens to cover.
+      - ``KNN_MODEL`` blends the k nearest stations' week-of-year normals, weighting
+        each by inverse distance so a closer station counts more.
 
     Each station's normal is the mean of its weekly cloud grouped by ISO week-of-year
     over all the years we hold. A week a station never observed simply doesn't
@@ -97,22 +99,25 @@ def estimate_statistical_normal(
     station_weekly = features.load_weekly_station_cloud(
         engine, [station_id for station_id, _ in selected]
     )
-    # Each selected station's own week-of-year normal, then averaged across stations
-    # (equal weight) per week — a station contributes to a week only where it has one.
-    week_sum: dict[int, float] = {}
-    week_count: dict[int, int] = {}
-    for station_id, _ in selected:
+    # Each selected station's own week-of-year normal, then blended across stations by
+    # inverse distance per week — a closer station counts more, and a station
+    # contributes to a week only where it has one. (For NEAREST the single station's
+    # weight cancels, so it reduces to that station's own normal.)
+    week_wsum: dict[int, float] = {}
+    week_weight: dict[int, float] = {}
+    for station_id, distance in selected:
+        weight = 1.0 / max(distance, 1.0)
         for week, mean in _station_week_of_year_normal(station_weekly.get(station_id, {})).items():
-            week_sum[week] = week_sum.get(week, 0.0) + mean
-            week_count[week] = week_count.get(week, 0) + 1
-    if not week_sum:
+            week_wsum[week] = week_wsum.get(week, 0.0) + weight * mean
+            week_weight[week] = week_weight.get(week, 0.0) + weight
+    if not week_wsum:
         raise LookupError("no neighbour cloud history near this location")
 
     series = [
         SpatialNormalPoint(
-            week=week, estimated_cloud_pct=round(week_sum[week] / week_count[week], 1)
+            week=week, estimated_cloud_pct=round(week_wsum[week] / week_weight[week], 1)
         )
-        for week in sorted(week_sum)
+        for week in sorted(week_wsum)
     ]
     return SpatialNormalResult(
         lat=lat,

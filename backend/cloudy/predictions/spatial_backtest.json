@@ -1,0 +1,126 @@
+{
+  "generated_at": "2026-06-20T12:55:21.065744+00:00",
+  "model_id": "spatial-smhi",
+  "n_stations": 109,
+  "shipped_estimator": "knn_idw",
+  "normal_task": {
+    "estimators": [
+      {
+        "id": "nearest",
+        "median_mae": 4.64,
+        "mean_mae": 6.03,
+        "p25": 3.38,
+        "p75": 7.53,
+        "n_stations": 109
+      },
+      {
+        "id": "knn_equalweight",
+        "median_mae": 4.3,
+        "mean_mae": 5.32,
+        "p25": 2.96,
+        "p75": 6.69,
+        "n_stations": 109
+      },
+      {
+        "id": "knn_idw",
+        "median_mae": 4.17,
+        "mean_mae": 5.25,
+        "p25": 2.9,
+        "p75": 6.46,
+        "n_stations": 109
+      },
+      {
+        "id": "gbm",
+        "median_mae": 3.95,
+        "mean_mae": 5.76,
+        "p25": 2.65,
+        "p75": 7.56,
+        "n_stations": 109
+      }
+    ],
+    "comparisons": [
+      {
+        "id": "nearest",
+        "vs": "knn_idw",
+        "win_pct": 41.3,
+        "median_delta": 0.484,
+        "ci": [
+          -0.053,
+          0.899
+        ],
+        "significant": false
+      },
+      {
+        "id": "knn_equalweight",
+        "vs": "knn_idw",
+        "win_pct": 33.0,
+        "median_delta": 0.128,
+        "ci": [
+          0.046,
+          0.169
+        ],
+        "significant": true
+      },
+      {
+        "id": "gbm",
+        "vs": "knn_idw",
+        "win_pct": 44.0,
+        "median_delta": 0.121,
+        "ci": [
+          -0.11,
+          0.416
+        ],
+        "significant": false
+      }
+    ]
+  },
+  "weekly_task": {
+    "estimators": [
+      {
+        "id": "nearest",
+        "median_mae": 7.46,
+        "mean_mae": 9.03,
+        "p25": 6.33,
+        "p75": 9.89,
+        "n_stations": 109
+      },
+      {
+        "id": "knn_equalweight",
+        "median_mae": 6.43,
+        "mean_mae": 7.61,
+        "p25": 5.38,
+        "p75": 8.8,
+        "n_stations": 109
+      },
+      {
+        "id": "knn_idw",
+        "median_mae": 6.19,
+        "mean_mae": 7.51,
+        "p25": 5.27,
+        "p75": 8.67,
+        "n_stations": 109
+      },
+      {
+        "id": "gbm",
+        "median_mae": 6.29,
+        "mean_mae": 7.97,
+        "p25": 5.34,
+        "p75": 9.41,
+        "n_stations": 109
+      }
+    ],
+    "comparisons": [
+      {
+        "id": "gbm",
+        "vs": "knn_idw",
+        "win_pct": 41.3,
+        "median_delta": 0.157,
+        "ci": [
+          -0.02,
+          0.403
+        ],
+        "significant": false
+      }
+    ]
+  }
+}

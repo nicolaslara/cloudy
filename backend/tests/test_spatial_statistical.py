@@ -21,6 +21,16 @@ _POINTS = [
 ]
 
 
+def _inverse_distance_mean(
+    neighbours: list[tuple[int, float]], values: dict[int, float]
+) -> float:
+    """The estimate the shipped kNN should produce: each neighbour's value weighted by
+    1/distance (floored at 1 km), so the nearest neighbour counts most."""
+    weights = {sid: 1.0 / max(distance, 1.0) for sid, distance in neighbours}
+    weighted_sum = sum(weights[sid] * values[sid] for sid in weights)
+    return round(weighted_sum / sum(weights.values()), 1)
+
+
 def test_statistical_normal_nearest_uses_only_the_closest_station(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -58,10 +68,10 @@ def test_statistical_normal_nearest_uses_only_the_closest_station(
     assert requested["ids"] == [order[0][0]]
 
 
-def test_statistical_normal_knn_averages_the_neighbours_equally(
+def test_statistical_normal_knn_inverse_distance_weights_the_neighbours(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`knn` is the equal-weight mean of the k nearest stations' week-of-year normals."""
+    """`knn` is the inverse-distance-weighted mean of the k nearest stations' normals."""
     from datetime import date
 
     values = {1: 40.0, 2: 50.0, 3: 60.0, 4: 70.0, 5: 80.0, 6: 90.0}
@@ -84,7 +94,7 @@ def test_statistical_normal_knn_averages_the_neighbours_equally(
     )
 
     assert result.n_neighbours == len(order) == 5
-    expected = round(sum(values[sid] for sid, _ in order) / len(order), 1)
+    expected = _inverse_distance_mean(order, values)
     assert result.series[0].estimated_cloud_pct == expected
     # kNN loads exactly the k selected neighbours (not the 6th, farther station).
     assert requested["ids"] == [sid for sid, _ in order]
