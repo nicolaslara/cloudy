@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloudy: estimating cloud and lightning over Sweden</title>
+<style>
+:root{--paper:#f7f4ee;--ink:#202326;--muted:#5b6166;--line:#d9d2c4;--panel:#fffdf8;--code:#16191c;--cyan:#00818a;--blue:#285f9f;--amber:#b76a10;--red:#b54535;--green:#237a4b;--violet:#6d4aa2;--shadow:0 18px 45px rgba(35,31,24,.08);}
+*{box-sizing:border-box;} html{scroll-behavior:smooth;}
+body{margin:0;color:var(--ink);font:16px/1.58 ui-serif,Georgia,Cambria,serif;background:linear-gradient(90deg,rgba(32,35,38,.035) 1px,transparent 1px) 0 0/28px 28px,linear-gradient(rgba(32,35,38,.025) 1px,transparent 1px) 0 0/28px 28px,var(--paper);}
+a{color:var(--blue);text-decoration:none;} a:hover{text-decoration:underline;}
+
+/* deck + slides */
+.deck{height:100vh;overflow-y:scroll;scroll-snap-type:y proximity;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;}
+.slide{min-height:100vh;scroll-snap-align:start;display:flex;align-items:center;justify-content:center;padding:64px 56px;border-bottom:1px solid var(--line);}
+.slide-inner{width:100%;max-width:1100px;}
+/* Content is visible by default. JS adds .js to <html> to enable the reveal animation,
+   so if the IntersectionObserver never fires the content is never trapped invisible. */
+.js .slide-inner{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease;}
+.js .slide.revealed .slide-inner{opacity:1;transform:none;}
+@media(prefers-reduced-motion:reduce){.js .slide-inner{opacity:1;transform:none;transition:none;}.deck,html{scroll-behavior:auto;}}
+
+/* hero */
+.hero{min-height:100vh;scroll-snap-align:start;scroll-snap-stop:always;display:flex;flex-direction:column;justify-content:center;padding:80px 56px;border-bottom:1px solid var(--line);}
+.hero-inner{width:100%;max-width:1100px;margin:0 auto;}
+.hero .eyebrow{font-size:13px;}
+.hero h1{margin:0 0 22px;font:850 clamp(34px,5.4vw,62px)/1.02 ui-sans-serif,system-ui,sans-serif;letter-spacing:-.01em;max-width:18ch;border-top:3px solid var(--ink);padding-top:24px;}
+.hero .dek{font:400 clamp(17px,2.1vw,23px)/1.5 ui-serif,Georgia,Cambria,serif;color:var(--muted);max-width:62ch;margin:0 0 30px;}
+.hero .stack-line{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;}
+.hero .chip{font:800 11px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:8px 13px;box-shadow:2px 2px 0 var(--ink);}
+.hero .scroll-hint{margin-top:44px;font:800 11px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);}
+.hero-cta{display:inline-block;margin-top:30px;font:800 13px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.04em;color:var(--paper);background:var(--ink);border-radius:8px;padding:14px 22px;box-shadow:3px 3px 0 var(--cyan);text-decoration:none;}
+.hero-cta:hover{box-shadow:1px 1px 0 var(--cyan);}
+
+/* progress bar + dot nav */
+.deck-progress{position:fixed;top:0;left:0;height:4px;width:0;z-index:60;background:linear-gradient(90deg,var(--cyan),var(--blue));transition:width .15s ease;}
+.deck-dots{position:fixed;top:50%;right:22px;transform:translateY(-50%);z-index:60;display:flex;flex-direction:column;gap:10px;max-height:90vh;overflow:visible;}
+.deck-dots button{position:relative;width:10px;height:10px;padding:0;border-radius:50%;cursor:pointer;border:1px solid var(--ink);background:transparent;transition:transform .2s,background .2s;}
+.deck-dots button:hover{background:var(--muted);}
+.deck-dots button.active{background:var(--cyan);border-color:var(--cyan);transform:scale(1.5);}
+.deck-dots button span{position:absolute;right:18px;top:50%;transform:translateY(-50%);white-space:nowrap;opacity:0;pointer-events:none;font:800 11px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);transition:opacity .2s;}
+.deck-dots button:hover span{opacity:1;}
+
+/* typography + callouts */
+.eyebrow{font:800 12px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);margin:0 0 10px;}
+h2{margin:0 0 16px;padding-top:10px;border-top:2px solid var(--ink);font:850 30px/1.05 ui-sans-serif,system-ui,sans-serif;}
+h3{margin:24px 0 8px;font:800 19px/1.2 ui-sans-serif,system-ui,sans-serif;}
+p{margin:12px 0;} .slide-inner>p{max-width:880px;} ul,ol{padding-left:24px;max-width:880px;} li{margin:6px 0;}
+code{font-family:'SF Mono',ui-monospace,Menlo,Consolas,monospace;font-size:.88em;background:#eee7da;padding:1px 5px;border-radius:4px;}
+.note,.seam,.warning{padding:14px 16px;border-radius:0 8px 8px 0;font-size:15px;margin:18px 0;max-width:880px;}
+.note{border-left:5px solid var(--amber);background:#fff8e8;}
+.seam{border-left:5px solid var(--green);background:#edf8f0;}
+.warning{border-left:5px solid var(--red);background:#fff0ec;}
+
+/* figures, code, svg, tables */
+figure{margin:22px 0;padding:14px;background:rgba(255,253,248,.85);border:1px solid var(--line);border-radius:10px;overflow:auto;}
+figcaption{margin-top:10px;color:var(--muted);font:12.5px/1.45 ui-sans-serif,system-ui,sans-serif;}
+svg{display:block;max-width:100%;height:auto;margin:0 auto;} svg text{font-family:ui-sans-serif,system-ui,sans-serif;}
+figure.code{padding:0;background:var(--code);border:none;box-shadow:var(--shadow);}
+figure.code pre{margin:0;padding:16px 18px;overflow:auto;background:var(--code);color:#e7e2d6;border-radius:10px 10px 0 0;font:12.7px/1.5 'SF Mono',ui-monospace,Menlo,Consolas,monospace;}
+figure.code code{background:none;padding:0;color:inherit;font-size:inherit;}
+figure.code figcaption{margin:0;padding:8px 14px;border-radius:0 0 10px 10px;background:var(--panel);border-top:1px solid var(--line);color:var(--muted);}
+table{width:100%;border-collapse:collapse;margin:16px 0;max-width:1000px;font:13px/1.45 ui-sans-serif,system-ui,sans-serif;background:var(--panel);}
+th,td{padding:9px 10px;border:1px solid var(--line);text-align:left;vertical-align:top;} th{background:#e8dfcf;font-weight:800;}
+/* equations */
+.eqn{max-width:880px;}
+.eqn .eq{font:17px/1.7 ui-serif,Georgia,Cambria,serif;text-align:center;margin:8px 0;color:var(--ink);}
+.eqn .eq i{font-style:italic;color:var(--blue);}
+.eqn .eq .lab{display:inline-block;min-width:104px;margin-right:16px;text-align:right;color:var(--muted);font:12.5px/1.4 ui-sans-serif,system-ui,sans-serif;font-style:normal;}
+.eqn .eq-main{font-size:20px;font-weight:600;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);}
+.frac{display:inline-block;vertical-align:middle;text-align:center;margin:0 2px;}
+.frac .num{display:block;padding:0 7px 2px;border-bottom:1.5px solid currentColor;}
+.frac .den{display:block;padding:2px 7px 0;}
+
+/* section dividers — dark panel so a section break is unmistakable */
+.section-divider{text-align:center;background:var(--ink);}
+.section-divider .slide-inner{max-width:780px;}
+.section-divider .eyebrow{color:#7fd6dd;}
+.section-divider .divider-title{display:inline-block;margin:0 0 18px;padding-top:18px;border-top:3px solid var(--paper);color:var(--paper);font:850 clamp(30px,4.6vw,52px)/1.05 ui-sans-serif,system-ui,sans-serif;letter-spacing:-.01em;}
+.section-divider .divider-dek{margin:0 auto;max-width:54ch;color:#cbd2d8;font:400 clamp(16px,2vw,21px)/1.5 ui-serif,Georgia,Cambria,serif;}
+
+/* overview "journey" — the build as numbered stops, each with the one design
+   decision that mattered and any experiment I tried and then dropped. */
+.journey{list-style:none;margin:22px 0 0;padding:0;max-width:1000px;}
+.journey>li{position:relative;margin:0;padding:0 0 24px 56px;border-left:2px solid var(--line);}
+.journey>li:last-child{border-left-color:transparent;padding-bottom:0;}
+.journey .num{position:absolute;left:-17px;top:-3px;width:32px;height:32px;border-radius:50%;background:var(--ink);color:var(--paper);font:800 14px/32px ui-sans-serif,system-ui,sans-serif;text-align:center;box-shadow:2px 2px 0 var(--cyan);}
+.journey .step-t{margin:0;font:800 18px/1.25 ui-sans-serif,system-ui,sans-serif;}
+.journey .step-d{margin:4px 0 0;color:var(--muted);font-size:15px;max-width:74ch;}
+.journey .tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px;}
+.journey .tag{font:700 11px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.01em;color:var(--cyan);background:var(--panel);border:1px solid var(--cyan);border-radius:999px;padding:5px 10px;}
+.journey .drop{margin-top:9px;padding:9px 12px;border-left:4px solid var(--amber);background:#fff8e8;border-radius:0 7px 7px 0;font-size:14px;color:var(--ink);max-width:74ch;}
+.journey .drop b{display:inline-block;margin-right:7px;color:var(--amber);font:800 10.5px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.09em;text-transform:uppercase;}
+@media(max-width:820px){.slide{padding:80px 20px 60px;}.hero{padding:80px 20px;}h2{font-size:24px;}.deck-dots{display:none;}.journey>li{padding-left:42px;}}
+</style>
+</head>
+<body>
+<div class="deck-progress"></div>
+<div class="deck-dots"></div>
+<div class="deck">
+
+<section class="hero" data-group="Intro">
+<div class="hero-inner">
+<p class="eyebrow">A data story</p>
+<h1>Cloudy: estimating cloud and lightning over Sweden</h1>
+<p class="dek">Cloudy answers a practical question for Swedish locations: what is normal here, what has happened recently, and how much should that change the next few weeks? This deck follows the product as it is: the data I ingest, the cleanup rules, the read path, the normals view, the weekly outlook, the spatial estimate, and the deploy path.</p>
+<div class="stack-line">
+<span class="chip">SMHI metobs</span>
+<span class="chip">SMHI lightning</span>
+<span class="chip">PostgreSQL</span>
+<span class="chip">FastAPI</span>
+<span class="chip">Pydantic</span>
+<span class="chip">Backtested outlook</span>
+<span class="chip">React + TypeScript</span>
+</div>
+<a class="hero-cta" href="/app/">Open the app</a>
+<p class="scroll-hint">Scroll to begin &#8595;</p>
+</div>
+</section>
+
+<section class="slide" id="overview" data-group="Overview"><div class="slide-inner"><p class="eyebrow">Overview</p><h2>What I built, end to end</h2><p>The whole project answers one question for any spot in Sweden: what is normal here, what just happened, and how much should that change the next few weeks? Six steps get there. Two of them carry a model I built, measured, and then threw away &#8212; kept here only as the evidence behind a decision.</p>
+<ol class="journey">
+<li><span class="num">1</span><p class="step-t">Backend architecture</p><p class="step-d">A FastAPI service over Postgres. The request path only reads; the expensive Sweden-wide scan runs once, at ingestion.</p><div class="tags"><span class="tag">Typed end to end</span><span class="tag">Precompute at ingest</span><span class="tag">Cache behind a Protocol</span></div></li>
+<li><span class="num">2</span><p class="step-t">Data ingestion</p><p class="step-d">Two live SMHI feeds &#8212; hourly cloud cover at stations, and country-wide lightning strikes &#8212; cleaned in one place and rolled up for fast reads.</p><div class="tags"><span class="tag">Idempotent + incremental</span><span class="tag">One cleanup function</span><span class="tag">Rollups at six resolutions</span></div></li>
+<li><span class="num">3</span><p class="step-t">Exploration screens</p><p class="step-d">Synchronized cloud and lightning charts for a location, plus a lightning map that queries only what is in the current viewport.</p><div class="tags"><span class="tag">Viewport-scoped queries</span><span class="tag">No pre-rendered raster</span></div></li>
+<li><span class="num">4</span><p class="step-t">Normals</p><p class="step-d">The seasonal baseline &#8212; and, for a place with no station, the cloud normal estimated from its nearest stations.</p><div class="tags"><span class="tag">kNN of 5 nearest &#8212; shipped</span></div><div class="drop"><b>Alternative tried</b>a learned GBM was benchmarked against the kNN estimate; on held-out stations it only tied it &#8212; no significant per-station gain &#8212; so the simpler kNN ships and the model is dropped.</div></li>
+<li><span class="num">5</span><p class="step-t">Predictions</p><p class="step-d">A one-to-two week outlook that nudges the normal toward whatever the last few weeks actually did, backtested causally.</p><div class="tags"><span class="tag">Damped persistence &#8212; shipped</span><span class="tag">Causal backtest</span></div><div class="drop"><b>Alternative tried</b>analog forecasting was tested against damped persistence; it scored negative skill (&#8722;1.5% vs +2.1%, beating the normal at 24% of stations vs 98%), so it is dropped.</div></li>
+<li><span class="num">6</span><p class="step-t">Deployment</p><p class="step-d">Terraform describes the infrastructure; GitHub Actions ships the code after tests pass. Serving and ingestion stay separate processes.</p><div class="tags"><span class="tag">Pages + Fly + Neon + R2</span><span class="tag">Deploy after tests</span></div></li>
+</ol>
+</div></section>
+
+<section class="slide section-divider" id="roadmap-divider" data-group="Roadmap"><div class="slide-inner"><p class="eyebrow">PART 1</p><h2 class="divider-title">Where I'm going</h2><p class="divider-dek">What the data gives me, and the two gaps I close: space between stations, and recency.</p></div></section>
+<section class="slide" id="the-frame" data-group="Roadmap"><div class="slide-inner"><p class="eyebrow">Roadmap</p><h2>What the data can and cannot say</h2><p>SMHI gives me cloud cover at 109 weather stations across Sweden. That tells me how cloudy it is at each station, but nothing about the air in between. A seasonal normal tells me how cloudy a place usually is in a given week of the year, but it is flat year over year and has no sense of what the last few weeks actually did. I close those two gaps with two kinds of model: spatial models fill in space, and a damped persistence model adds recency in time.</p>
+<figure>
+<svg viewBox="0 0 900 460" role="img" aria-label="Stations know cloud only at points; normals have no recency; two model families fill each gap.">
+<text x="40" y="40" font-family="sans-serif" font-size="20" font-weight="700" fill="#1f2937">Cloud is known AT stations, unknown in between</text>
+<line x1="60" y1="95" x2="840" y2="95" stroke="#cbd5e1" stroke-width="2"/>
+<circle cx="120" cy="95" r="9" fill="#2563eb"/>
+<circle cx="300" cy="95" r="9" fill="#2563eb"/>
+<circle cx="600" cy="95" r="9" fill="#2563eb"/>
+<circle cx="780" cy="95" r="9" fill="#2563eb"/>
+<text x="445" y="80" font-family="sans-serif" font-size="40" font-weight="700" fill="#6b7280" text-anchor="middle">?</text>
+<text x="445" y="130" font-family="sans-serif" font-size="14" fill="#6b7280" text-anchor="middle">value unknown between stations</text>
+
+<text x="40" y="195" font-family="sans-serif" font-size="20" font-weight="700" fill="#1f2937">The normal: how it usually is &#8212; no recency</text>
+<path d="M60 270 Q 250 220 450 250 T 840 245" fill="none" stroke="#9ca3af" stroke-width="3"/>
+<text x="450" y="300" font-family="sans-serif" font-size="14" fill="#6b7280" text-anchor="middle">flat seasonal climatology, same every year</text>
+
+<line x1="450" y1="320" x2="450" y2="360" stroke="#1f2937" stroke-width="2"/>
+<polygon points="450,368 444,356 456,356" fill="#1f2937"/>
+
+<rect x="120" y="378" width="290" height="62" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+<text x="265" y="405" font-family="sans-serif" font-size="16" font-weight="700" fill="#1e40af" text-anchor="middle">spatial models</text>
+<text x="265" y="427" font-family="sans-serif" font-size="14" fill="#1e3a8a" text-anchor="middle">fill space</text>
+
+<rect x="490" y="378" width="290" height="62" rx="8" fill="#fff7ed" stroke="#ea580c" stroke-width="2"/>
+<text x="635" y="405" font-family="sans-serif" font-size="16" font-weight="700" fill="#c2410c" text-anchor="middle">damped model</text>
+<text x="635" y="427" font-family="sans-serif" font-size="14" fill="#9a3412" text-anchor="middle">add time</text>
+</svg>
+<figcaption>Two gaps in the raw data, and the model family that fills each.</figcaption>
+</figure>
+</div></section>
+<section class="slide" id="space-vs-time" data-group="Roadmap"><div class="slide-inner"><p class="eyebrow">Roadmap</p><h2>The map: space on one axis, time on the other</h2><p>This grid is the map for the deck. The horizontal axis is time: on the left, the seasonal normal; on the right, recent conditions. The vertical axis is space: at the top, values at stations; at the bottom, estimates at any point. The shipped product fills the grid with small, explicit pieces: normals, damped persistence, kNN spatial estimates, and their composition. Lightning is area-based, so it uses its own simpler shape: count strike-days in a circle and compare them to the seasonal normal.</p>
+<figure>
+<svg viewBox="0 0 900 480" role="img" aria-label="Two-by-two grid of space versus time, with each model placed in the cell it improves.">
+<!-- axis labels -->
+<text x="450" y="30" font-family="sans-serif" font-size="15" font-weight="700" fill="#374151" text-anchor="middle">TIME &#8594;</text>
+<text x="245" y="55" font-family="sans-serif" font-size="13" fill="#6b7280" text-anchor="middle">normal / how it usually is</text>
+<text x="615" y="55" font-family="sans-serif" font-size="13" fill="#6b7280" text-anchor="middle">now / recency</text>
+<text x="40" y="245" font-family="sans-serif" font-size="15" font-weight="700" fill="#374151" text-anchor="middle" transform="rotate(-90 40 245)">SPACE &#8595;</text>
+<text x="78" y="135" font-family="sans-serif" font-size="13" fill="#6b7280" text-anchor="middle" transform="rotate(-90 78 135)">at a station</text>
+<text x="78" y="360" font-family="sans-serif" font-size="13" fill="#6b7280" text-anchor="middle" transform="rotate(-90 78 360)">at any point</text>
+
+<!-- cells -->
+<rect x="110" y="70" width="370" height="170" rx="8" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+<text x="295" y="150" font-family="sans-serif" font-size="18" font-weight="700" fill="#475569" text-anchor="middle">normals</text>
+<text x="295" y="176" font-family="sans-serif" font-size="13" fill="#64748b" text-anchor="middle">I already have this</text>
+
+<rect x="480" y="70" width="370" height="170" rx="8" fill="#fff7ed" stroke="#ea580c" stroke-width="2"/>
+<text x="665" y="150" font-family="sans-serif" font-size="18" font-weight="700" fill="#c2410c" text-anchor="middle">damped persistence</text>
+<text x="665" y="176" font-family="sans-serif" font-size="13" fill="#9a3412" text-anchor="middle">Prediction part &#8212; adds time</text>
+
+<rect x="110" y="240" width="370" height="170" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+<text x="295" y="320" font-family="sans-serif" font-size="18" font-weight="700" fill="#1e40af" text-anchor="middle">spatial kNN / nearest</text>
+<text x="295" y="346" font-family="sans-serif" font-size="13" fill="#1e3a8a" text-anchor="middle">Spatial part &#8212; adds space</text>
+
+<rect x="480" y="240" width="370" height="170" rx="8" fill="#dcfce7" stroke="#22c55e" stroke-width="2"/>
+<text x="665" y="316" font-family="sans-serif" font-size="18" font-weight="700" fill="#166534" text-anchor="middle">combined</text>
+<text x="665" y="342" font-family="sans-serif" font-size="13" fill="#15803d" text-anchor="middle">done &#8212; kNN &#215; damped</text>
+
+<!-- lightning note -->
+<text x="110" y="455" font-family="sans-serif" font-size="13" fill="#6b7280">Lightning is area-based and sits outside this grid &#8212; normals only so far.</text>
+</svg>
+<figcaption>Each piece improves one axis. The point-and-recency case is the composition of kNN spatial normals and the damped weekly outlook.</figcaption>
+</figure>
+</div></section>
+
+<section class="slide section-divider" id="data-divider" data-group="Data"><div class="slide-inner"><p class="eyebrow">PART 2</p><h2 class="divider-title">The data</h2><p class="divider-dek">Two live SMHI sources: what each contains, what it does not, and how it is served.</p></div></section>
+
+<section class="slide" id="source-list" data-group="Data"><div class="slide-inner"><p class="eyebrow">Data</p><h2>Two live sources, each isolated</h2><p>The system serves two SMHI observation feeds. Each has its own ingest module and carries a <code>(source, source_version)</code> tag inside its natural key, so feeds can never collide. Cloud is a station time series. Lightning is a country-wide event stream. Everything else in the app is derived from those two sources.</p>
+<table><thead><tr><th>Source</th><th>What it is</th><th>Provider</th><th>source tag</th></tr></thead><tbody>
+<tr><td>SMHI cloud cover (param 16)</td><td>hourly cloud % at stations</td><td>SMHI metobs</td><td><code>smhi-metobs</code></td></tr>
+<tr><td>SMHI lightning</td><td>per-discharge strike events</td><td>SMHI</td><td><code>smhi-lightning</code></td></tr>
+</tbody></table>
+<div class="note">Live ingest modules: <code>ingest/cloud.py</code> and <code>ingest/lightning.py</code>. The read path and model views are built from these tables and their rollups.</div>
+</div></section>
+
+<section class="slide" id="smhi-cloud" data-group="Data"><div class="slide-inner"><p class="eyebrow">Data</p><h2>SMHI cloud cover: the served base</h2><p>This is the only source actually served to users. It gives hourly total cloud cover at each station, but only at the station: there is nothing in between, nothing sub-hourly, and no wind, temperature, or humidity to explain the value.</p>
+<figure>
+<svg viewBox="0 0 760 300">
+<rect x="20" y="20" width="720" height="260" rx="10" fill="#0f1f33" stroke="#2a4a6a" stroke-width="1.5"/>
+<text x="44" y="56" fill="#9fd0ff" font-size="20" font-weight="700">SMHI cloud (param 16)</text>
+<text x="44" y="92" fill="#7fe0a0" font-size="14" font-weight="700">WHY</text>
+<text x="92" y="92" fill="#d7e6f5" font-size="14">served ground truth</text>
+<text x="44" y="124" fill="#7fe0a0" font-size="14" font-weight="700">HAS</text>
+<text x="92" y="124" fill="#d7e6f5" font-size="14">hourly cloud_pct 0&#8211;100 per station, quality flag G/Y kept</text>
+<text x="44" y="156" fill="#f0a0a0" font-size="14" font-weight="700">NOT</text>
+<text x="92" y="156" fill="#d7e6f5" font-size="14">nothing between stations, no sub-hourly, no wind/temp/humidity,</text>
+<text x="92" y="176" fill="#d7e6f5" font-size="14">no cloud type or base height</text>
+<text x="44" y="208" fill="#ffd479" font-size="14" font-weight="700">SIZE</text>
+<text x="92" y="208" fill="#d7e6f5" font-size="14">9.92M rows / 2.2 GB &#160;&#183;&#160; 2015-01-01 &#8594; 2026-03-01</text>
+<text x="92" y="228" fill="#d7e6f5" font-size="14">109 active of 459 stations &#160;&#183;&#160; 4.8% of hours NULL (gaps kept)</text>
+<text x="44" y="262" fill="#8aa0b8" font-size="12.5">Two feeds: immutable corrected-archive + rolling latest-months (upserted)</text>
+</svg>
+<figcaption>The card states why I keep the source, what each row holds, what it cannot tell me, and its size on disk.</figcaption>
+</figure>
+</div></section>
+
+<section class="slide" id="smhi-lightning" data-group="Data"><div class="slide-inner"><p class="eyebrow">Data</p><h2>SMHI lightning: point events everywhere</h2><p>Unlike cloud, lightning covers the whole country, not just stations: one row per discharge. It is the storm-activity signal. It carries no cloud cover, no stored density raster, and no altitude.</p>
+<figure>
+<svg viewBox="0 0 760 320">
+<rect x="20" y="20" width="720" height="280" rx="10" fill="#1a1430" stroke="#4a3a6a" stroke-width="1.5"/>
+<text x="44" y="56" fill="#c9b0ff" font-size="20" font-weight="700">SMHI lightning (CSV)</text>
+<text x="44" y="92" fill="#7fe0a0" font-size="14" font-weight="700">WHY</text>
+<text x="92" y="92" fill="#e3dcf5" font-size="14">storm signal, high-resolution point events country-wide</text>
+<text x="44" y="124" fill="#7fe0a0" font-size="14" font-weight="700">HAS</text>
+<text x="92" y="124" fill="#e3dcf5" font-size="14">per-discharge ts_utc (&#181;s), lat/lon, signed peak_current_ka,</text>
+<text x="92" y="144" fill="#e3dcf5" font-size="14">multiplicity, cloud_indicator (0 = cloud-to-ground), raw quality geometry</text>
+<text x="44" y="176" fill="#f0a0a0" font-size="14" font-weight="700">NOT</text>
+<text x="92" y="176" fill="#e3dcf5" font-size="14">no cloud %, no stored density field (re-aggregated on query), no altitude</text>
+<text x="44" y="220" fill="#ffd479" font-size="14" font-weight="700">SIZE</text>
+<text x="92" y="220" fill="#e3dcf5" font-size="14">4.11M rows / 1.4 GB &#160;&#183;&#160; 2015-01-01 &#8594; 2026-06-16</text>
+<text x="92" y="240" fill="#e3dcf5" font-size="14">1.74M cloud-to-ground (~42%)</text>
+<text x="44" y="282" fill="#a89cc0" font-size="12.5">Density is re-aggregated per query, never stored as a raster</text>
+</svg>
+<figcaption>The card states why I keep lightning, what each discharge row holds, what it lacks, and its size on disk.</figcaption>
+</figure>
+</div></section>
+
+<section class="slide" id="exploration-pages" data-group="Data"><div class="slide-inner"><p class="eyebrow">Data</p><h2>Exploration is the raw-data workbench</h2><p>The app has two exploration pages beside Normals and Predictions. <strong>Exploration</strong> shows cloud and lightning as synchronized time-series charts for the selected location. <strong>Map</strong> shows lightning events in the current viewport and time window. These are the pages that make the raw feeds inspectable before they become seasonal normals or weekly outlooks.</p>
+<figure>
+<svg viewBox="0 0 980 430" role="img" aria-label="Two product screenshots: exploration charts and lightning map.">
+<rect x="20" y="28" width="455" height="350" rx="14" fill="#111827" stroke="#0f172a" stroke-width="2"/>
+<rect x="20" y="28" width="455" height="34" rx="14" fill="#1f2937"/>
+<circle cx="44" cy="45" r="5" fill="#ef4444"/><circle cx="62" cy="45" r="5" fill="#f59e0b"/><circle cx="80" cy="45" r="5" fill="#22c55e"/>
+<text x="104" y="50" fill="#d1d5db" font-size="12">/app/?view=explore&amp;location=Stockholm</text>
+<rect x="44" y="86" width="110" height="30" rx="15" fill="#0ea5e9"/>
+<text x="99" y="106" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700">Exploration</text>
+<text x="44" y="148" fill="#f9fafb" font-size="19" font-weight="700">Cloud + lightning chart</text>
+<text x="44" y="173" fill="#9ca3af" font-size="12">Same window, same aggregation, two feeds</text>
+<line x1="64" y1="305" x2="430" y2="305" stroke="#374151"/>
+<line x1="64" y1="205" x2="64" y2="305" stroke="#374151"/>
+<path d="M64 266 C110 238 140 284 178 258 S250 210 292 236 358 290 430 252" fill="none" stroke="#60a5fa" stroke-width="4"/>
+<path d="M64 295 C120 290 140 270 178 276 S246 300 294 284 360 248 430 270" fill="none" stroke="#f59e0b" stroke-width="3"/>
+<g fill="#f59e0b" opacity=".75">
+<rect x="88" y="286" width="10" height="19"/><rect x="132" y="270" width="10" height="35"/><rect x="176" y="282" width="10" height="23"/><rect x="220" y="252" width="10" height="53"/><rect x="264" y="289" width="10" height="16"/><rect x="308" y="276" width="10" height="29"/><rect x="352" y="238" width="10" height="67"/><rect x="396" y="268" width="10" height="37"/>
+</g>
+<text x="64" y="335" fill="#9ca3af" font-size="11">Auto / Week / Month / Year</text>
+<text x="330" y="335" fill="#93c5fd" font-size="11">cloud</text>
+<text x="380" y="335" fill="#fbbf24" font-size="11">lightning</text>
+
+<rect x="505" y="28" width="455" height="350" rx="14" fill="#0f172a" stroke="#0f172a" stroke-width="2"/>
+<rect x="505" y="28" width="455" height="34" rx="14" fill="#1f2937"/>
+<circle cx="529" cy="45" r="5" fill="#ef4444"/><circle cx="547" cy="45" r="5" fill="#f59e0b"/><circle cx="565" cy="45" r="5" fill="#22c55e"/>
+<text x="589" y="50" fill="#d1d5db" font-size="12">/app/?view=map&amp;location=Stockholm</text>
+<rect x="529" y="86" width="86" height="30" rx="15" fill="#0ea5e9"/>
+<text x="572" y="106" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700">Map</text>
+<text x="529" y="148" fill="#f9fafb" font-size="19" font-weight="700">Lightning in the viewport</text>
+<text x="529" y="173" fill="#9ca3af" font-size="12">Map query follows pan, zoom, and time range</text>
+<rect x="529" y="194" width="390" height="130" rx="10" fill="#102b3f" stroke="#244761"/>
+<path d="M565 315 C610 278 640 256 682 246 S760 226 824 200" fill="none" stroke="#4b6b86" stroke-width="16" opacity=".65"/>
+<path d="M548 265 C606 252 650 224 694 214 S780 216 898 185" fill="none" stroke="#365571" stroke-width="10" opacity=".7"/>
+<path d="M595 320 C640 300 665 292 710 300 S790 320 868 290" fill="none" stroke="#2c4a62" stroke-width="12" opacity=".7"/>
+<g fill="#f97316" opacity=".92">
+<circle cx="604" cy="247" r="4"/><circle cx="632" cy="259" r="3.5"/><circle cx="672" cy="224" r="4.5"/><circle cx="714" cy="238" r="3"/><circle cx="760" cy="215" r="4"/><circle cx="804" cy="232" r="3.5"/><circle cx="842" cy="201" r="4"/><circle cx="882" cy="221" r="3"/>
+</g>
+<rect x="545" y="286" width="116" height="24" rx="12" fill="rgba(15,23,42,.78)"/>
+<text x="603" y="302" text-anchor="middle" fill="#f8fafc" font-size="11">viewport-scoped</text>
+<text x="529" y="350" fill="#9ca3af" font-size="11">Events are fetched by map bounds and visible time window, not pre-rendered as a raster.</text>
+</svg>
+<figcaption>The exploration pages are deliberately direct: one chart view for cloud and lightning over time, one map view for lightning events in space.</figcaption>
+</figure>
+</div></section>
+
+<section class="slide" id="cloud-rollups" data-group="Data"><div class="slide-inner"><p class="eyebrow">Data</p><h2>Rollups: the chart page never scans raw rows</h2><p>The Exploration chart asks for cloud at a chosen resolution &#8212; anywhere from hourly to yearly. Aggregating <code>cloud_hourly</code> on every request would be slow, so on each ingest I precompute per-station buckets at six fixed resolutions and store them in <code>cloud_rollups</code>. The read path then serves those rows directly: a chart is a lookup, not an aggregation. Each bucket also keeps its counts &#8212; observed, expected, missing &#8212; so a gappy week is reported as gappy instead of silently averaging over holes. Because it materializes six resolutions across every station and every bucket, this derived table is the largest on disk, which the next slide shows.</p><figure class="code"><pre><code># ingest/cloud.py — rebuilt from cloud_hourly on every ingest
+ROLLUP_RESOLUTIONS = ("hour", "6h", "day", "week", "month", "year")
+
+
+class CloudRollup(SQLModel, table=True):
+    station_id: int
+    resolution: str  # one of ROLLUP_RESOLUTIONS
+    bucket_start: datetime
+    observed_count: int
+    expected_count: int
+    missing_count: int
+    mean_cloud_pct: float | None
+    p05_cloud_pct: float | None
+    p50_cloud_pct: float | None
+    p95_cloud_pct: float | None</code></pre><figcaption>One row per (station, resolution, bucket): counts plus mean and percentiles, so the chart reads a summary instead of scanning hours.</figcaption></figure></div></section>
+<section class="slide" id="data-size" data-group="Data"><div class="slide-inner"><p class="eyebrow">Data</p><h2>Where the bytes actually go</h2><p>The live database holds two raw sources plus the precomputed serving rollups. The chart below is a snapshot of table size on disk, in megabytes; longer bars are larger tables. The top bar, <code>cloud_rollups</code>, is derived data, not raw input, and is the single largest table at 4.0 GB because it stores every station at six serving resolutions.</p>
+<figure>
+<svg viewBox="0 0 760 280">
+<line x1="200" y1="30" x2="200" y2="230" stroke="#3a5a7a" stroke-width="1.5"/>
+<!-- scale: 4047 MB -> 520 px; 540px width at x=200..740 -->
+<g font-size="13" fill="#d7e6f5" text-anchor="end">
+<text x="190" y="64">cloud_rollups</text>
+<text x="190" y="124">cloud_hourly</text>
+<text x="190" y="184">lightning_events</text>
+</g>
+<rect x="200" y="50" width="520" height="22" fill="#ff9f59"/>
+<rect x="200" y="110" width="289" height="22" fill="#5aa0e0"/>
+<rect x="200" y="170" width="178" height="22" fill="#5aa0e0"/>
+<g font-size="13" fill="#9fd0ff" font-weight="700">
+<text x="728" y="67">4047</text>
+<text x="497" y="127">2246</text>
+<text x="386" y="187">1388</text>
+</g>
+<text x="470" y="262" fill="#8aa0b8" font-size="13" text-anchor="middle">size on disk (MB)</text>
+</svg>
+<figcaption>Each bar is one live Postgres table. The orange top bar is precomputed rollups, not raw data; the derived serving table outweighs the raw inputs because it is optimized for the chart read path.</figcaption>
+</figure>
+</div></section>
+
+<section class="slide section-divider" id="cleanup-divider" data-group="Cleanup"><div class="slide-inner"><p class="eyebrow">PART 3</p><h2 class="divider-title">Cleaning the data</h2><p class="divider-dek">Where raw values are normalized, where they are preserved, and how writes stay repeatable.</p></div></section>
+
+<section class="slide" id="bad-cloud-data" data-group="Cleanup"><div class="slide-inner"><p class="eyebrow">Cleanup</p><h2>One place turns raw values into cloud percent</h2><p>Every raw cloud reading passes through a single function before it becomes a percentage. Sentinels (113, 9999, -9999), negatives, anything over 100, and octa readings above 8 all return <code>None</code>. The 113 code means the sky was obscured or not observable, so I treat it as unknown rather than as overcast. Octas convert with <code>value / 8 * 100</code>. Because the fix lives in one place, there is no second code path to keep in sync.</p>
+<figure class="code"><pre><code>MISSING_SENTINELS = frozenset({113, 9999, -9999})
+
+
+def normalize_cloud_pct(raw, *, octas=False):
+    if raw is None or raw == "":
+        return None
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return None
+    if value in MISSING_SENTINELS or value &lt; 0:
+        return None
+    if octas:
+        if value &gt; 8:
+            return None
+        return value / 8.0 * 100.0
+    if value &gt; 100:
+        return None
+    return value</code></pre><figcaption>core/units.py &#8212; the only place raw SMHI values become cloud percent.</figcaption></figure></div></section>
+
+<section class="slide" id="lightning-cleanup" data-group="Cleanup"><div class="slide-inner"><p class="eyebrow">Cleanup</p><h2>Lightning is kept raw</h2><p>Strike events get no value sanitizer. I do not filter peak current or any other field against a physical range, because the raw measurements are the signal I want to keep. The only thing I drop is structurally malformed CSV lines: a row that fails to parse is caught, counted, and skipped. Everything that parses is stored verbatim, including the raw quality geometry, so it stays available for later use.</p>
+<figure class="code"><pre><code>for line in csv.DictReader(f, delimiter=";"):
+    try:
+        ts = datetime(int(line["year"]), ...)
+        row = {"peak_current_ka": float(line["peakCurrent"]), ...}
+        rows.append(row)
+    except (KeyError, ValueError, TypeError):
+        skipped += 1</code></pre><figcaption>ingest/lightning.py parse_rows &#8212; malformed lines are counted, not cleaned.</figcaption></figure></div></section>
+
+<section class="slide" id="idempotent" data-group="Cleanup"><div class="slide-inner"><p class="eyebrow">Cleanup</p><h2>Ingest is idempotent and incremental</h2><p>Each ingest unit is replaced or upserted inside one transaction, so re-running a day or a station does not duplicate rows or leave a half-written state. The <code>(source, source_version)</code> pair is part of every natural key. Corrected cloud archives use delete-then-insert; rolling cloud updates use upsert; lightning replaces one day and refreshes its rollup. New data lands without rewriting the full archive.</p>
+<figure class="code"><pre><code>with engine.begin() as conn:  # one transaction: replace the whole day
+    conn.execute(
+        delete(LightningEvent).where(
+            LightningEvent.day == day,
+            LightningEvent.source_version == SOURCE_VERSION,
+        )
+    )
+    if rows:
+        conn.execute(insert(LightningEvent), rows)
+    refresh_sweden_daily_rollups(conn, day, day)</code></pre><figcaption>ingest/lightning.py &#8212; delete, insert, and rollup refresh in one transaction.</figcaption></figure></div></section>
+
+<section class="slide section-divider" id="arch-divider" data-group="Architecture"><div class="slide-inner"><p class="eyebrow">PART 4</p><h2 class="divider-title">Architecture</h2><p class="divider-dek">The stack and the decisions that keep the read path fast and the Python/TypeScript contract mechanical.</p></div></section>
+
+<section class="slide" id="pydantic-types" data-group="Architecture"><div class="slide-inner"><p class="eyebrow">Architecture</p><h2>Typed requests, typed responses</h2><p>Pydantic validates every request against bounds and enums before any query runs. A latitude outside the Sweden envelope, a radius that is not 50 or 100, or a longitude without its latitude all return a 422 instead of a bad result. Responses are plain TypedDicts, so they describe shape at type-check time and cost nothing at runtime.</p><figure class="code"><pre><code>class PredictionsCloudQuery(BaseModel):
+    model_config = {"populate_by_name": True}
+
+    lat: Annotated[float | None, Field(ge=54.0, le=70.0)] = None
+    lon: Annotated[float | None, Field(ge=9.0, le=26.0)] = None
+    radius_km: Literal[50, 100] = 50
+
+    @model_validator(mode="after")
+    def _location_is_a_pair(self) -> Self:
+        if (self.lat is None) ^ (self.lon is None):
+            raise ValueError("lat and lon must be provided together")
+        return self</code></pre><figcaption>predictions/query.py &#8212; Sweden envelope (lat 54&#8211;70, lon 9&#8211;26) and paired-coordinate check.</figcaption></figure></div></section>
+
+<section class="slide" id="ts-generation" data-group="Architecture"><div class="slide-inner"><p class="eyebrow">Architecture</p><h2>TypeScript types generated from Python</h2><p>The frontend does not hand-write API types. FastAPI emits an OpenAPI schema from the same response models, and <code>openapi-typescript</code> turns that schema into <code>schema.gen.ts</code>, which the frontend imports. The generation runs offline &#8212; no server, no database &#8212; so it works the same in CI and on a laptop. Rename a field in Python and the dependent TypeScript stops compiling.</p><figure class="code"><pre><code># frontend/scripts/gen-api.sh
+( cd "${BACKEND_DIR}" &amp;&amp; uv run python -c \
+    "import json, cloudy.api as a; print(json.dumps(a.create_app().openapi(), indent=2))" \
+) &gt; "${SCHEMA_JSON}"
+
+node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" "${SCHEMA_JSON}"
+
+pnpm exec openapi-typescript "${SCHEMA_JSON}" -o "${SCHEMA_TS}"</code></pre><figcaption>create_app().openapi() &#8594; openapi.json &#8594; validate &#8594; openapi-typescript &#8594; schema.gen.ts (1333 lines).</figcaption></figure></div></section>
+
+<section class="slide" id="precompute" data-group="Architecture"><div class="slide-inner"><p class="eyebrow">Architecture</p><h2>Precompute at ingestion</h2><p>The Sweden-wide normal is a percentile scan over about 10 million rows, which takes roughly 10 seconds when run live &#8212; too slow for a request. So I run that scan once per ingest, off the request path, and write the result to a table. The read path then serves the materialized rows. Located queries touch only a few stations, so those stay live and sub-second.</p><figure class="code"><pre><code>def refresh_sweden_normals(
+    engine, source="smhi-metobs", source_version="1.0"
+) -> int:
+    written = 0
+    with engine.begin() as conn:
+        for period in ("day", "month", "year"):
+            bucket = f"EXTRACT({_PERIOD_FIELD[period]} FROM ts_utc)::int"
+            rows = conn.execute(
+                text(_NORMAL_SQL.format(bucket=bucket, station_filter=_SWEDEN_FILTER))
+            ).all()
+            conn.execute(delete(CloudNormal).where(...))
+            if rows:
+                conn.execute(insert(CloudNormal), [... for row in rows])
+                written += len(rows)
+    return written</code></pre><figcaption>cloud_normals: one row per (scope, period, bucket) with mean, p10/p50/p90, and clear/partial/overcast shares.</figcaption></figure></div></section>
+
+<section class="slide" id="cache-abstraction" data-group="Architecture"><div class="slide-inner"><p class="eyebrow">Architecture</p><h2>Cache behind a Protocol</h2><p>A real deployment would use a shared cache like Redis. Here it is an in-memory LRU. The route code never names either one: it talks to a <code>Cache</code> Protocol whose values are JSON strings only. Swapping the backend is a new implementation plus a config value, not a change to any route.</p><figure class="code"><pre><code>class Cache(Protocol):
+    def get(self, key: str) -> str | None: ...
+
+    def set(self, key: str, value: str, ttl_s: int) -> None: ...
+
+
+@lru_cache  # one cache instance per process
+def get_cache() -> Cache:
+    backend = get_settings().cache_backend
+    if backend == "memory":
+        return MemoryCache()
+    raise ValueError(f"unknown cache backend: {backend!r} (supported: memory)")</code></pre><figcaption>core/cache.py &#8212; MemoryCache is an OrderedDict LRU with lazy TTL, maxsize 1024. Routes cache under composed keys, e.g. clim:cloud:{lat}:{lon}:{radius}:{period}, with CACHE_TTL_S = 3600.</figcaption></figure><div class="note">Values are JSON strings only, so a shared backend like Redis drops in without touching the contract.</div></div></section>
+
+<section class="slide" id="two-goals" data-group="Goals"><div class="slide-inner"><p class="eyebrow">Goals</p><h2>Two goals, two different problems</h2><p>Cloud and lightning need different shapes of answer. Cloud is a value at a point, and the nearest stations may be far away, so the work is estimating across distance. Lightning is regional &#8212; a strike lands somewhere in an area, and how far that is from a station does not matter &#8212; so the work is counting in a circle. Recency (the damped model) is explored for both, but cloud is the clean case.</p><figure><svg viewBox="0 0 760 360"><text x="190" y="34" text-anchor="middle" font-size="20" font-weight="700" fill="#1a2b4a">Cloud at a point</text><line x1="50" y1="80" x2="760" y2="80" stroke="#d7dce5" stroke-width="1"/><circle cx="120" cy="180" r="9" fill="#2f6fb0"/><polygon points="120,162 126,178 114,178" fill="#2f6fb0"/><text x="120" y="210" text-anchor="middle" font-size="13" fill="#1a2b4a">query point</text><circle cx="40" cy="120" r="6" fill="#7a869a"/><circle cx="250" cy="130" r="6" fill="#7a869a"/><circle cx="60" cy="280" r="6" fill="#7a869a"/><circle cx="300" cy="250" r="6" fill="#7a869a"/><circle cx="200" cy="320" r="6" fill="#7a869a"/><line x1="120" y1="180" x2="40" y2="120" stroke="#9aa4b5" stroke-width="1.3"/><line x1="120" y1="180" x2="250" y2="130" stroke="#9aa4b5" stroke-width="1.3"/><line x1="120" y1="180" x2="60" y2="280" stroke="#9aa4b5" stroke-width="1.3"/><line x1="120" y1="180" x2="300" y2="250" stroke="#9aa4b5" stroke-width="1.3"/><line x1="120" y1="180" x2="200" y2="320" stroke="#9aa4b5" stroke-width="1.3"/><text x="190" y="345" text-anchor="middle" font-size="12" fill="#52607a">must estimate here from far stations</text><line x1="400" y1="60" x2="400" y2="340" stroke="#d7dce5" stroke-width="1"/><text x="590" y="34" text-anchor="middle" font-size="20" font-weight="700" fill="#1a2b4a">Lightning in an area</text><circle cx="590" cy="200" r="95" fill="#f0a84a" fill-opacity="0.18" stroke="#f0a84a" stroke-width="1.5"/><circle cx="560" cy="170" r="4" fill="#d98324"/><circle cx="610" cy="160" r="4" fill="#d98324"/><circle cx="630" cy="210" r="4" fill="#d98324"/><circle cx="560" cy="230" r="4" fill="#d98324"/><circle cx="600" cy="240" r="4" fill="#d98324"/><circle cx="585" cy="195" r="4" fill="#d98324"/><circle cx="540" cy="110" r="4" fill="#bcc4d0"/><circle cx="690" cy="270" r="4" fill="#bcc4d0"/><text x="590" y="335" text-anchor="middle" font-size="12" fill="#52607a">count strikes in the area; station distance irrelevant</text></svg><figcaption>Left: a query point with lines to its few distant stations &#8212; cloud must be inferred across distance. Right: a circle over scattered strikes &#8212; lightning is just a count inside the area. Recency (the damped model) is explored for both; cloud is the clean case.</figcaption></figure></div></section>
+
+<section class="slide section-divider" id="spatial-divider" data-group="Normals"><div class="slide-inner"><p class="eyebrow">PART 5</p><h2 class="divider-title">Normals: the cloud at a point</h2><p class="divider-dek">Estimate the seasonal cloud normal anywhere in Sweden from the nearest stations &#8212; kNN as the shipped estimate, with a learned model tried as a benchmark.</p></div></section>
+
+<section class="slide" id="spatial-goal-theory" data-group="Normals"><div class="slide-inner"><p class="eyebrow">Normals</p><h2>kNN is the shipped spatial estimate</h2><p>For a location without a station, the useful signal is nearby stations. Two rungs ship, both direct statistics on the 5 nearest stations' real observations: the nearest-station normal as the simple floor, and an inverse-distance kNN of those stations as the shipped estimate. A third rung, a learned model, was tried as a benchmark to answer one question &#8212; does learning beat the kNN? &#8212; but it did not pan out, so it never shipped.</p>
+<figure>
+<svg viewBox="0 0 760 400">
+<rect x="0" y="0" width="760" height="400" fill="#ffffff"/>
+<!-- left: neighbour diagram -->
+<text x="40" y="34" font-family="sans-serif" font-size="16" font-weight="bold" fill="#1f2933">5 nearest stations carry the signal</text>
+<!-- query point -->
+<circle cx="170" cy="200" r="9" fill="#2563eb"/>
+<text x="170" y="232" font-family="sans-serif" font-size="12" fill="#2563eb" text-anchor="middle">query point</text>
+<!-- station dots -->
+<line x1="170" y1="200" x2="80" y2="110" stroke="#9aa5b1" stroke-width="1.5"/>
+<line x1="170" y1="200" x2="300" y2="120" stroke="#9aa5b1" stroke-width="1.5"/>
+<line x1="170" y1="200" x2="320" y2="240" stroke="#9aa5b1" stroke-width="1.5"/>
+<line x1="170" y1="200" x2="120" y2="320" stroke="#9aa5b1" stroke-width="1.5"/>
+<line x1="170" y1="200" x2="60" y2="260" stroke="#9aa5b1" stroke-width="1.5"/>
+<circle cx="80" cy="110" r="6" fill="#52606d"/>
+<circle cx="300" cy="120" r="6" fill="#52606d"/>
+<circle cx="320" cy="240" r="6" fill="#52606d"/>
+<circle cx="120" cy="320" r="6" fill="#52606d"/>
+<circle cx="60" cy="260" r="6" fill="#52606d"/>
+<text x="118" y="150" font-family="sans-serif" font-size="10" fill="#616e7c">31 km / 318&#176;</text>
+<text x="235" y="155" font-family="sans-serif" font-size="10" fill="#616e7c">47 km / 41&#176;</text>
+<text x="245" y="228" font-family="sans-serif" font-size="10" fill="#616e7c">52 km / 74&#176;</text>
+<text x="120" y="290" font-family="sans-serif" font-size="10" fill="#616e7c">66 km / 153&#176;</text>
+<text x="55" y="245" font-family="sans-serif" font-size="10" fill="#616e7c">71 km / 226&#176;</text>
+<!-- right: ladder -->
+<text x="450" y="34" font-family="sans-serif" font-size="16" font-weight="bold" fill="#1f2933">Three rungs tried, two shipped</text>
+<rect x="450" y="280" width="250" height="44" rx="6" fill="#eef2f7" stroke="#9aa5b1"/>
+<text x="575" y="307" font-family="sans-serif" font-size="13" fill="#1f2933" text-anchor="middle">1 &#183; nearest station normal</text>
+<rect x="450" y="190" width="250" height="44" rx="6" fill="#dbeafe" stroke="#60a5fa"/>
+<text x="575" y="217" font-family="sans-serif" font-size="13" fill="#1f2933" text-anchor="middle">2 &#183; inverse-distance kNN</text>
+<rect x="450" y="100" width="250" height="44" rx="6" fill="#fef3c7" stroke="#b45309" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="575" y="127" font-family="sans-serif" font-size="13" fill="#b45309" text-anchor="middle">3 &#183; learned model &#8212; dropped</text>
+<line x1="575" y1="280" x2="575" y2="234" stroke="#2563eb" stroke-width="2"/>
+<line x1="575" y1="190" x2="575" y2="144" stroke="#b45309" stroke-width="2" stroke-dasharray="5 4"/>
+<polygon points="575,234 571,242 579,242" fill="#2563eb"/>
+<polygon points="575,144 571,152 579,152" fill="#b45309"/>
+<text x="715" y="200" font-family="sans-serif" font-size="11" fill="#616e7c" transform="rotate(90 715 200)" text-anchor="middle">increasing complexity</text>
+</svg>
+<figcaption>Left: a query point and its 5 nearest stations with distance and bearing. Right: the same neighbours feed the two shipped rungs &#8212; the simple baseline and the kNN estimate &#8212; plus a learned model that was tried as a benchmark and dropped.</figcaption>
+</figure>
+<div class="note">DEFAULT_NEIGHBOURS = 5, chosen so the point is triangulated and a single missing station does not break the estimate.</div>
+</div></section>
+
+<section class="slide" id="spatial-implementation" data-group="Normals"><div class="slide-inner"><p class="eyebrow">Normals</p><h2>A location never sees itself</h2><p>The evaluation uses the same neighbour rule as serving: when the origin is a station, that station is excluded from its own neighbour list. That gives leave-station-out scoring directly from the data shape. Whole stations go to disjoint folds, and serving reuses the same feature writers, so the benchmark is measured on the same inputs the shipped estimate uses.</p>
+<figure class="code"><pre><code>def nearest_neighbours(points, k=DEFAULT_NEIGHBOURS):
+    neighbours = {}
+    for origin in points:
+        ranked = sorted(
+            (
+                (other.id, haversine_km(origin.lat, origin.lon, other.lat, other.lon))
+                for other in points
+                if other.id != origin.id
+            ),
+            key=lambda pair: pair[1],
+        )
+        neighbours[origin.id] = ranked[:k]
+    return neighbours</code></pre><figcaption>features.py: the origin station is filtered out, so a location can never use itself as a neighbour.</figcaption></figure>
+<p>The benchmark model was LightGBM with 400 trees, learning rate 0.05, 31 leaves, fit on MAE (<code>regression_l1</code>). Features are the 5 nearest stations' cloud values plus distance, bearing, lat/lon, and seasonal sin/cos. It was a path I explored and then discarded: the result on the next slide is kept as evidence, but the learned model itself is not in the codebase &mdash; only the kNN estimate and the shared feature writers it was measured against ship.</p>
+</div></section>
+
+<section class="slide" id="spatial-results" data-group="Normals"><div class="slide-inner"><p class="eyebrow">Normals</p><h2>For the seasonal normal, the benchmark only tied kNN</h2><p>The spatial estimate guesses a point&#8217;s seasonal cloud normal &#8212; the typical cloud each week of the year &#8212; from the nearest stations. A learned model (LightGBM), benchmarked on held-out stations, only ties the shipped kNN.</p>
+<figure>
+<svg viewBox="0 0 900 184" font-family="sans-serif">
+<rect x="0" y="0" width="900" height="184" fill="#ffffff"/>
+<line x1="258" y1="18" x2="258" y2="148" stroke="#94a3b8" stroke-width="1.5"/>
+<line x1="258" y1="148" x2="858" y2="148" stroke="#52606d" stroke-width="1.5"/>
+<g font-size="11.5" fill="#616e7c" text-anchor="middle">
+<text x="258" y="166">0</text><text x="458" y="166">2</text><text x="658" y="166">4</text><text x="858" y="166">6</text>
+</g>
+<g font-size="13.5" fill="#1f2933" text-anchor="end">
+<text x="250" y="40">nearest station</text>
+<text x="250" y="72">kNN equal-weight</text>
+<text x="250" y="104">kNN inverse-distance &#8212; shipped</text>
+<text x="250" y="136">learned GBM &#8212; dropped</text>
+</g>
+<rect x="258" y="24" width="464" height="24" fill="#94a3b8"/>
+<rect x="258" y="56" width="430" height="24" fill="#cbd5e1"/>
+<rect x="258" y="88" width="417" height="24" fill="#22c55e"/>
+<rect x="258" y="120" width="395" height="24" fill="#dbeafe" stroke="#2563eb" stroke-width="1.3" stroke-dasharray="4 3"/>
+<g font-size="13" font-weight="bold">
+<text x="728" y="40" fill="#1f2933">4.64</text>
+<text x="694" y="72" fill="#1f2933">4.30</text>
+<text x="681" y="104" fill="#15803d">4.17</text>
+<text x="659" y="136" fill="#1d4ed8">3.95</text>
+</g>
+<text x="697" y="136" font-size="11" fill="#64748b">&#8212; lower median, worse on average</text>
+</svg>
+<table><thead><tr><th>Estimator</th><th>median error</th><th>beats shipped at</th><th>verdict</th></tr></thead><tbody>
+<tr><td>nearest station</td><td>4.64</td><td>41%</td><td>worse</td></tr>
+<tr><td>kNN equal-weight</td><td>4.30</td><td>33%</td><td>worse</td></tr>
+<tr><td>kNN inverse-distance &#8212; <b>shipped</b></td><td><b>4.17</b></td><td>&#8212;</td><td>&#8212;</td></tr>
+<tr><td>learned GBM &#8212; dropped</td><td>3.95</td><td>44%</td><td><b>tie</b> &#8212; not a win</td></tr>
+</tbody></table>
+<figcaption>Bars are median error per station (cloud %-points; lower is better). The GBM&#8217;s 3.95 looks lower than the shipped 4.17, but that&#8217;s skew, not skill: it loses at 56% of stations, its losses are bigger than its wins (1.86 vs 1.21 pp; one station off by 14.6), and its average error is actually worse (5.76 vs 5.25) &#8212; no real gain, a tie. I ship inverse-distance because it does beat the plain equal-weight average, at two-thirds of stations. Numbers from <code>cloudy spatial-backtest</code>.</figcaption>
+</figure>
+</div></section>
+
+<section class="slide" id="spatial-verdict" data-group="Normals"><div class="slide-inner"><p class="eyebrow">Normals</p><h2>For one week&#8217;s cloud, still no gain &#8212; so I dropped it</h2><p>I also tried a tougher spatial test: estimate a station&#8217;s cloud for a single week from its neighbours&#8217; readings that same week. Here too the learned model is no better than a one-line inverse-distance average.</p>
+<figure>
+<svg viewBox="0 0 900 232" font-family="sans-serif">
+<rect x="0" y="0" width="900" height="232" fill="#ffffff"/>
+<text x="60" y="24" font-size="14" font-weight="700" fill="#0f172a">One week&#8217;s cloud, from the neighbours&#8217; same-week readings</text>
+<line x1="258" y1="40" x2="258" y2="186" stroke="#94a3b8" stroke-width="1.5"/>
+<line x1="258" y1="186" x2="858" y2="186" stroke="#52606d" stroke-width="1.5"/>
+<g font-size="11" fill="#616e7c" text-anchor="middle">
+<text x="258" y="202">0</text><text x="408" y="202">2</text><text x="558" y="202">4</text><text x="708" y="202">6</text><text x="858" y="202">8</text>
+</g>
+<text x="558" y="220" font-size="11.5" fill="#475569" text-anchor="middle">median error per station (pp) &#8212; lower is better</text>
+<g font-size="12.5" fill="#1f2933" text-anchor="end">
+<text x="250" y="61">nearest station</text>
+<text x="250" y="94">kNN of same-week readings</text>
+<text x="250" y="127">kNN inverse-distance</text>
+<text x="250" y="160">learned GBM &#8212; dropped</text>
+</g>
+<rect x="258" y="44" width="560" height="24" fill="#94a3b8"/>
+<rect x="258" y="77" width="482" height="24" fill="#cbd5e1"/>
+<rect x="258" y="110" width="464" height="24" fill="#0ea5e9"/>
+<rect x="258" y="143" width="472" height="24" fill="#dbeafe" stroke="#2563eb" stroke-width="1.3" stroke-dasharray="4 3"/>
+<g font-size="12" font-weight="bold">
+<text x="824" y="61" fill="#1f2933">7.46</text>
+<text x="746" y="94" fill="#1f2933">6.43</text>
+<text x="728" y="127" fill="#0369a1">6.19</text>
+<text x="736" y="160" fill="#1d4ed8">6.29</text>
+</g>
+<text x="772" y="160" font-size="10.5" fill="#64748b">&#8212; no gain</text>
+</svg>
+<figcaption>Same 109 stations, one week at a time; lower is better. The shipped seasonal-normal estimate isn&#8217;t shown &#8212; it doesn&#8217;t try to track a single week. The GBM (6.29) doesn&#8217;t beat inverse-distance (6.19).</figcaption>
+</figure>
+<div class="note"><b>Why drop a model that looks competitive?</b> On honest station data it isn&#8217;t better &#8212; a tie on the seasonal normal, no gain on a single week &#8212; so LightGBM isn&#8217;t worth its weight. The one real free win, inverse-distance weighting, I did take: it&#8217;s now the shipped kNN. The learned model adds nothing on top.</div>
+</div></section>
+
+<section class="slide section-divider" id="prediction-divider" data-group="Prediction"><div class="slide-inner"><p class="eyebrow">PART 6</p><h2 class="divider-title">Prediction: adding recency</h2><p class="divider-dek">A 1-2 week outlook that nudges the seasonal normal toward what the recent weeks actually did.</p></div></section>
+
+<section class="slide" id="damped-model" data-group="Prediction"><div class="slide-inner"><p class="eyebrow">Prediction</p><h2>The damped model in one number</h2><p>A seasonal normal says how cloudy a week usually is, but it has no idea what just happened. The fix is small: take the normal for the week and add a fraction of how far the recent weeks have run above or below it. That fraction is <em>alpha</em>, the lag-k autocorrelation of weekly anomalies. Weekly anomalies persist (lag-1 is about 0.3 across Sweden, higher in some places); monthly ones barely do. I clamp alpha to [0, 1]: floored at 0 so a noisy negative value cannot flip the signal, capped at 1 so I never amplify an anomaly. At alpha = 0 the forecast collapses back to the normal.</p>
+<figure class="eqn">
+<div class="eq"><span class="lab">recent gap</span> <i>a</i> = recent &#8722; normal</div>
+<div class="eq"><span class="lab">persistence</span> <i>&#945;</i><sub>h</sub> = clamp( <span class="frac"><span class="num">&#931;&#8201;<i>a</i><sub>t</sub>&#8201;<i>a</i><sub>t+h</sub></span><span class="den">&#931;&#8201;<i>a</i><sub>t</sub><sup>2</sup></span></span> , 0, 1 )</div>
+<div class="eq eq-main"><span class="lab">forecast</span> <i>&#375;</i> = normal + <i>&#945;</i><sub>h</sub> &#183; <i>a</i></div>
+<figcaption>The whole model is one fitted number per lead, <i>&#945;</i> (alpha): the share of a recent anomaly that still holds <i>h</i> weeks out, measured as the lag-<i>h</i> autocorrelation of weekly anomalies and clamped to [0,&#8201;1]. At <i>&#945;</i>&#8201;=&#8201;0 the forecast is exactly the normal &#8212; the floor that stops it scoring worse than climatology on average.</figcaption>
+</figure>
+<figure>
+<table>
+<thead><tr><th>normal (this week)</th><th>recent week ran</th><th>gap <i>a</i></th><th><i>&#945;</i></th><th>forecast = normal + <i>&#945;</i>&#183;<i>a</i></th></tr></thead>
+<tbody>
+<tr><td>65%</td><td>80% &#8212; cloudier</td><td>+15</td><td>0.30&nbsp;&nbsp;(lead 1)</td><td>65 + 0.30&#215;15 = <strong>69.5%</strong></td></tr>
+<tr><td>65%</td><td>50% &#8212; clearer</td><td>&#8722;15</td><td>0.30</td><td>65 &#8722; 0.30&#215;15 = <strong>60.5%</strong></td></tr>
+<tr><td>65%</td><td>80% &#8212; cloudier</td><td>+15</td><td>0.10&nbsp;&nbsp;(lead 2)</td><td>65 + 0.10&#215;15 = <strong>66.5%</strong></td></tr>
+<tr><td>65%</td><td>80% &#8212; cloudier</td><td>+15</td><td>0.00&nbsp;&nbsp;(no persistence)</td><td>65 + 0 = <strong>65%</strong> &#8212; the normal</td></tr>
+</tbody>
+</table>
+<figcaption>One week, one +15-point surprise, read four ways: a bigger <i>&#945;</i> leans harder on the surprise; a longer lead carries a smaller <i>&#945;</i>, so the forecast melts back toward the normal; and where history shows no persistence (<i>&#945;</i>&#8201;=&#8201;0) it returns the normal unchanged.</figcaption>
+</figure>
+<figure class="code"><pre><code>def fit_alpha(anomalies, lead):
+    present = [a for a in anomalies if a is not None]
+    if len(present) &lt;= lead:
+        return 0.0
+    mean = fmean(present)
+    var = sum((a - mean) ** 2 for a in present) / len(present)
+    if var == 0:
+        return 0.0
+    pairs = [
+        (a, b)
+        for t in range(len(anomalies) - lead)
+        if (a := anomalies[t]) is not None and (b := anomalies[t + lead]) is not None
+    ]
+    cov = sum((a - mean) * (b - mean) for a, b in pairs) / len(pairs)
+    return max(0.0, min(1.0, cov / var))  # floor 0, cap 1</code></pre><figcaption>predictions/persistence.py: forecast = normal + alpha x recent anomaly. The series sits on a gap-free weekly grid, so a missing week is None and a lag never steps across a hole.</figcaption></figure>
+</div></section>
+
+<section class="slide" id="damped-testing" data-group="Prediction"><div class="slide-inner"><p class="eyebrow">Prediction</p><h2>Tested with a causal backtest</h2><p>To trust the outlook I score it the way it would actually run. At each weekly origin I rebuild the normal from only the weeks up to that origin, so a past forecast is never measured against data from its own future. I let about two years of weeks accumulate first as warm-up, then start scoring. The baseline is the normal itself, which always predicts an anomaly of zero. Skill is the fraction by which the model cuts the baseline's error: 1 minus model MAE over baseline MAE.</p>
+<figure class="code"><pre><code>climatology = {woy: total[woy] / count[woy] for woy in total}
+causal = [
+    None if v is None else v - climatology[woys[i]]
+    for i, v in enumerate(values[: origin + 1])
+]
+prediction = predict(causal, woys, origin, lead)
+
+target = actual - climatology[target_woy]
+model_err.append(abs(target - prediction))
+base_err.append(abs(target))  # the normal predicts zero anomaly
+
+skill = 1.0 - fmean(model_err) / base_mae</code></pre><figcaption>predictions/outlook.py rolling-origin backtest. MIN_TRAIN_WEEKS = 104 (~2 years) of warm-up; leads 1 and 2, beyond which alpha falls to ~0.</figcaption></figure>
+</div></section>
+
+<section class="slide" id="damped-results" data-group="Prediction"><div class="slide-inner"><p class="eyebrow">Prediction</p><h2>What the backtest shows</h2><p>Averaged over Sweden the gain is small but consistent: lead-1 median skill is +2.1%, and the model beats the normal at 98.2% of stations. The nearest station to Stockholm &#8212; Berga, 29 km south &#8212; is a clearer (and unusually favorable) example. The chart plots rolling 52-week mean absolute error, not raw cloud: gray is the seasonal normal, blue is the damped outlook, and lower is better. Across the backtest the normal is off by 23.2 points on average; the damped outlook is off by 16.5.</p><figure><svg viewBox="0 0 920 420" role="img" aria-label="Rolling 52-week mean absolute error for Berga, the nearest station to Stockholm: seasonal normal versus damped forecast, 2017 to 2026"><line x1="80" y1="40" x2="80" y2="360" stroke="#888888" stroke-width="1"/><line x1="80" y1="360" x2="860" y2="360" stroke="#888888" stroke-width="1"/><line x1="80" y1="360" x2="860" y2="360" stroke="#eeeeee" stroke-width="1"/><text x="72" y="364" text-anchor="end" font-family="sans-serif" font-size="12" fill="#555555">0</text><line x1="80" y1="280" x2="860" y2="280" stroke="#eeeeee" stroke-width="1"/><text x="72" y="284" text-anchor="end" font-family="sans-serif" font-size="12" fill="#555555">10</text><line x1="80" y1="200" x2="860" y2="200" stroke="#eeeeee" stroke-width="1"/><text x="72" y="204" text-anchor="end" font-family="sans-serif" font-size="12" fill="#555555">20</text><line x1="80" y1="120" x2="860" y2="120" stroke="#eeeeee" stroke-width="1"/><text x="72" y="124" text-anchor="end" font-family="sans-serif" font-size="12" fill="#555555">30</text><line x1="80" y1="40" x2="860" y2="40" stroke="#eeeeee" stroke-width="1"/><text x="72" y="44" text-anchor="end" font-family="sans-serif" font-size="12" fill="#555555">40</text><text x="80.0" y="382" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#555555">2017</text><text x="166.7" y="382" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#555555">2018</text><text x="253.3" y="382" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#555555">2019</text><text x="340.0" y="382" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#555555">2020</text><text x="426.7" y="382" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#555555">2021</text><text x="513.3" y="382" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#555555">2022</text><text x="600.0" y="382" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#555555">2023</text><text x="686.7" y="382" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#555555">2024</text><text x="773.3" y="382" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#555555">2025</text><text x="860.0" y="382" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#555555">2026</text><text x="26" y="200" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#333333" transform="rotate(-90 26 200)">mean abs error (cloud %)</text><polygon points="80.0,212.0 135.7,196.0 191.4,176.0 247.1,189.6 302.9,156.8 358.6,96.8 414.3,128.8 470.0,145.6 525.7,139.2 581.4,141.6 637.1,136.0 692.9,172.0 748.6,204.8 804.3,161.6 860.0,161.6 860.0,208.8 804.3,218.4 748.6,232.0 692.9,224.0 637.1,202.4 581.4,214.4 525.7,229.6 470.0,220.0 414.3,189.6 358.6,185.6 302.9,246.4 247.1,259.2 191.4,236.0 135.7,231.2 80.0,232.0" fill="#2f6fd0" fill-opacity="0.10"/><polyline points="80.0,212.0 135.7,196.0 191.4,176.0 247.1,189.6 302.9,156.8 358.6,96.8 414.3,128.8 470.0,145.6 525.7,139.2 581.4,141.6 637.1,136.0 692.9,172.0 748.6,204.8 804.3,161.6 860.0,161.6" fill="none" stroke="#9aa0a6" stroke-width="2.5"/><polyline points="80.0,232.0 135.7,231.2 191.4,236.0 247.1,259.2 302.9,246.4 358.6,185.6 414.3,189.6 470.0,220.0 525.7,229.6 581.4,214.4 637.1,202.4 692.9,224.0 748.6,232.0 804.3,218.4 860.0,208.8" fill="none" stroke="#2f6fd0" stroke-width="2.5"/><circle cx="80.0" cy="212.0" r="2.6" fill="#9aa0a6"/><circle cx="135.7" cy="196.0" r="2.6" fill="#9aa0a6"/><circle cx="191.4" cy="176.0" r="2.6" fill="#9aa0a6"/><circle cx="247.1" cy="189.6" r="2.6" fill="#9aa0a6"/><circle cx="302.9" cy="156.8" r="2.6" fill="#9aa0a6"/><circle cx="358.6" cy="96.8" r="2.6" fill="#9aa0a6"/><circle cx="414.3" cy="128.8" r="2.6" fill="#9aa0a6"/><circle cx="470.0" cy="145.6" r="2.6" fill="#9aa0a6"/><circle cx="525.7" cy="139.2" r="2.6" fill="#9aa0a6"/><circle cx="581.4" cy="141.6" r="2.6" fill="#9aa0a6"/><circle cx="637.1" cy="136.0" r="2.6" fill="#9aa0a6"/><circle cx="692.9" cy="172.0" r="2.6" fill="#9aa0a6"/><circle cx="748.6" cy="204.8" r="2.6" fill="#9aa0a6"/><circle cx="804.3" cy="161.6" r="2.6" fill="#9aa0a6"/><circle cx="860.0" cy="161.6" r="2.6" fill="#9aa0a6"/><circle cx="80.0" cy="232.0" r="2.6" fill="#2f6fd0"/><circle cx="135.7" cy="231.2" r="2.6" fill="#2f6fd0"/><circle cx="191.4" cy="236.0" r="2.6" fill="#2f6fd0"/><circle cx="247.1" cy="259.2" r="2.6" fill="#2f6fd0"/><circle cx="302.9" cy="246.4" r="2.6" fill="#2f6fd0"/><circle cx="358.6" cy="185.6" r="2.6" fill="#2f6fd0"/><circle cx="414.3" cy="189.6" r="2.6" fill="#2f6fd0"/><circle cx="470.0" cy="220.0" r="2.6" fill="#2f6fd0"/><circle cx="525.7" cy="229.6" r="2.6" fill="#2f6fd0"/><circle cx="581.4" cy="214.4" r="2.6" fill="#2f6fd0"/><circle cx="637.1" cy="202.4" r="2.6" fill="#2f6fd0"/><circle cx="692.9" cy="224.0" r="2.6" fill="#2f6fd0"/><circle cx="748.6" cy="232.0" r="2.6" fill="#2f6fd0"/><circle cx="804.3" cy="218.4" r="2.6" fill="#2f6fd0"/><circle cx="860.0" cy="208.8" r="2.6" fill="#2f6fd0"/><line x1="120" y1="60" x2="150" y2="60" stroke="#9aa0a6" stroke-width="2.5"/><text x="156" y="64" font-family="sans-serif" font-size="12" fill="#333333">seasonal normal error</text><line x1="340" y1="60" x2="370" y2="60" stroke="#2f6fd0" stroke-width="2.5"/><text x="376" y="64" font-family="sans-serif" font-size="12" fill="#333333">damped model error</text></svg><figcaption>Berga (nearest station to Stockholm, 29 km), lead-1: rolling 52-week mean absolute error of the seasonal normal (gray) versus the damped forecast (blue); lower is better. The shaded band is the error the model removes. Over 459 weeks the normal is off by 23.2 cloud-% points on average, the model by 16.5 &#8212; a 29% cut. Berga is one of the country's most persistent sites; the Sweden-wide median cut is ~2%.</figcaption></figure>
+</div></section>
+
+<section class="slide" id="analog-experiment" data-group="Prediction"><div class="slide-inner"><p class="eyebrow">Prediction</p><h2>Tried and dropped: analog forecasting</h2><p>Damped persistence has a floor built in: at <i>&#945;</i>&#8201;=&#8201;0 it returns the normal, so on average it cannot do worse than climatology. Analog forecasting has no such floor. It works on anomalies (weekly cloud minus the seasonal normal), so it matches the recent <em>departure</em> from normal rather than the season itself: it takes the last four weeks of anomalies, ranks every earlier four-week window in the same season by how closely its week-by-week values line up (smallest squared difference), and averages what followed the few closest matches &#8212; never peeking past the forecast date. A reasonable idea, so I held it to the same causal rolling-origin backtest as the damped model, scored against real station observations.</p>
+<figure>
+<table>
+<thead><tr><th>model</th><th>median skill (lead 1)</th><th>beats the normal at</th></tr></thead>
+<tbody>
+<tr><td>damped persistence &#8212; shipped</td><td>+2.1%</td><td>98.2% of stations</td></tr>
+<tr><td>analog forecasting &#8212; dropped</td><td>&#8722;1.5%</td><td>23.9% of stations</td></tr>
+</tbody>
+</table>
+<figcaption>Skill is the fraction by which a model cuts the seasonal normal's mean absolute error, so the normal itself scores 0%. Analog lands below zero &#8212; on most stations it is worse than just predicting the normal &#8212; while damped persistence stays consistently above it. Damped is re-scored on current data (+2.1%); analog's &#8722;1.5% is from the original benchmark run, before it was removed.</figcaption>
+</figure>
+<div class="warning">A model that loses to the baseline only adds code and risk, so analog was measured and then removed rather than shipped. The number is kept as evidence for the decision; the model itself is not in the codebase. Only damped persistence ships.</div>
+</div></section>
+
+<section class="slide section-divider" id="lightning-divider" data-group="Lightning"><div class="slide-inner"><p class="eyebrow">PART 7</p><h2 class="divider-title">Lightning: area, not point</h2><p class="divider-dek">Strike chance is regional, so I count strikes in a circle; only normals exist so far.</p></div></section>
+<section class="slide" id="lightning-normals" data-group="Lightning"><div class="slide-inner"><p class="eyebrow">Lightning</p><h2>Strike-day probability over observed days</h2><p>Lightning is regional, not tied to a station: a discharge lands somewhere in an area, and how far it is from a weather station does not matter. So I count strikes inside a circle (default radius 10 km, secondary 25 km) and work in <strong>lightning-days</strong> &mdash; calendar days with at least one strike in the circle. The probability for a month is lightning-days divided by the days actually observed, not by the days on the calendar, so missing coverage cannot inflate the number.</p><figure><svg viewBox="0 0 760 380"><line x1="70" y1="320" x2="730" y2="320" stroke="#94a3b8" stroke-width="1.5"/><line x1="70" y1="60" x2="70" y2="320" stroke="#94a3b8" stroke-width="1.5"/><text x="40" y="66" fill="#475569" font-size="13" text-anchor="end">0.6</text><text x="40" y="196" fill="#475569" font-size="13" text-anchor="end">0.3</text><text x="40" y="324" fill="#475569" font-size="13" text-anchor="end">0</text><text x="24" y="200" fill="#475569" font-size="13" text-anchor="middle" transform="rotate(-90 24 200)">P(any strike day)</text><rect x="84" y="306" width="36" height="14" fill="#2563eb"/><rect x="134" y="298" width="36" height="22" fill="#2563eb"/><rect x="184" y="282" width="36" height="38" fill="#2563eb"/><rect x="234" y="252" width="36" height="68" fill="#2563eb"/><rect x="284" y="190" width="36" height="130" fill="#2563eb"/><rect x="334" y="220" width="36" height="100" fill="#2563eb"/><rect x="334" y="120" width="36" height="100" fill="#93c5fd"/><rect x="384" y="100" width="36" height="220" fill="#2563eb"/><rect x="434" y="108" width="36" height="212" fill="#2563eb"/><rect x="484" y="170" width="36" height="150" fill="#2563eb"/><rect x="534" y="240" width="36" height="80" fill="#2563eb"/><rect x="584" y="284" width="36" height="36" fill="#2563eb"/><rect x="634" y="300" width="36" height="20" fill="#2563eb"/><text x="102" y="338" fill="#475569" font-size="11" text-anchor="middle">Jan</text><text x="152" y="338" fill="#475569" font-size="11" text-anchor="middle">Feb</text><text x="202" y="338" fill="#475569" font-size="11" text-anchor="middle">Mar</text><text x="252" y="338" fill="#475569" font-size="11" text-anchor="middle">Apr</text><text x="302" y="338" fill="#475569" font-size="11" text-anchor="middle">May</text><text x="352" y="338" fill="#475569" font-size="11" text-anchor="middle">Jun</text><text x="402" y="338" fill="#475569" font-size="11" text-anchor="middle">Jul</text><text x="452" y="338" fill="#475569" font-size="11" text-anchor="middle">Aug</text><text x="502" y="338" fill="#475569" font-size="11" text-anchor="middle">Sep</text><text x="552" y="338" fill="#475569" font-size="11" text-anchor="middle">Oct</text><text x="602" y="338" fill="#475569" font-size="11" text-anchor="middle">Nov</text><text x="652" y="338" fill="#475569" font-size="11" text-anchor="middle">Dec</text><rect x="560" y="64" width="14" height="14" fill="#2563eb"/><text x="580" y="76" fill="#475569" font-size="12">observed so far</text><rect x="560" y="84" width="14" height="14" fill="#93c5fd"/><text x="580" y="96" fill="#475569" font-size="12">climatology tail</text></svg><figcaption>Each bar is the chance of at least one strike day in the circle that month, peaking in summer. The current month (June) is split: the solid lower segment is lightning-days already observed, the faded upper segment is the climatology estimate for the days left. The denominator is real observed days, so gaps in coverage do not inflate the probability.</figcaption></figure><p>The current-month figure is a linear extrapolation expressed in expected lightning-days: the days observed so far plus a climatology tail, where the tail is the monthly lightning-day rate times the days remaining. It is an expected count, not a compounded probability. The damped-persistence machinery does run on weekly lightning-days &#8212; pooled over a wider 25 km by default &#8212; but lightning is bursty and seasonal, so that output is shown only as indicative.</p>
+<div class="note">Lightning is served as <strong>climatology only</strong>. The archive contains observed strike events, not historical thunderstorm forecasts, so there are no forecast/outcome pairs for a near-term lightning model. A count model on the events alone did not show Brier skill over climatology, so the product keeps the honest baseline.</div></div></section>
+
+<section class="slide section-divider" id="deploy-divider" data-group="Deploy"><div class="slide-inner"><p class="eyebrow">PART 8</p><h2 class="divider-title">Deploy: four moving parts, one shape</h2><p class="divider-dek">The deployment is deliberately plain: static frontend, container API, serverless Postgres, and a raw archive cache for ingest.</p></div></section>
+<section class="slide" id="deploy-topology" data-group="Deploy"><div class="slide-inner"><p class="eyebrow">Deploy</p><h2>Terraform describes shape; Actions ships code</h2><p>The deployed system has four moving parts. Cloudflare Pages serves the deck and React app. Fly.io runs the FastAPI container. Neon stores Postgres. Cloudflare R2 stores the gitignored SMHI raw archive so scheduled ingest jobs can replay files before downloading anything missing. Terraform creates and wires the infrastructure; GitHub Actions deploys app code only after tests pass.</p>
+<figure>
+<svg viewBox="0 0 900 360" role="img" aria-label="Cloudy deployment topology: Pages, Fly, Neon, and R2.">
+<rect x="40" y="80" width="190" height="92" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+<text x="135" y="115" text-anchor="middle" font-size="17" font-weight="700" fill="#1e40af">Cloudflare Pages</text>
+<text x="135" y="142" text-anchor="middle" font-size="13" fill="#1e3a8a">deck + React app</text>
+<rect x="355" y="80" width="190" height="92" rx="10" fill="#fff7ed" stroke="#ea580c" stroke-width="2"/>
+<text x="450" y="115" text-anchor="middle" font-size="17" font-weight="700" fill="#c2410c">Fly.io</text>
+<text x="450" y="142" text-anchor="middle" font-size="13" fill="#9a3412">FastAPI container</text>
+<rect x="670" y="80" width="190" height="92" rx="10" fill="#f0fdf4" stroke="#22c55e" stroke-width="2"/>
+<text x="765" y="115" text-anchor="middle" font-size="17" font-weight="700" fill="#166534">Neon</text>
+<text x="765" y="142" text-anchor="middle" font-size="13" fill="#15803d">Postgres</text>
+<rect x="355" y="230" width="190" height="72" rx="10" fill="#faf5ff" stroke="#7c3aed" stroke-width="2"/>
+<text x="450" y="260" text-anchor="middle" font-size="16" font-weight="700" fill="#5b21b6">R2 raw archive</text>
+<text x="450" y="282" text-anchor="middle" font-size="12.5" fill="#6d28d9">SMHI replay cache</text>
+<line x1="230" y1="126" x2="355" y2="126" stroke="#334155" stroke-width="2"/>
+<polygon points="355,126 343,120 343,132" fill="#334155"/>
+<text x="292" y="112" text-anchor="middle" font-size="12" fill="#475569">/api/v1</text>
+<line x1="545" y1="126" x2="670" y2="126" stroke="#334155" stroke-width="2"/>
+<polygon points="670,126 658,120 658,132" fill="#334155"/>
+<text x="607" y="112" text-anchor="middle" font-size="12" fill="#475569">DATABASE_URL</text>
+<line x1="450" y1="230" x2="450" y2="172" stroke="#334155" stroke-width="2" stroke-dasharray="6 5"/>
+<polygon points="450,172 444,184 456,184" fill="#334155"/>
+<text x="510" y="206" font-size="12" fill="#475569">ingest job</text>
+<text x="450" y="334" text-anchor="middle" font-size="13" fill="#475569">Terraform wires service URLs and secrets. Deploy and ingest are separate GitHub Actions workflows.</text>
+</svg>
+<figcaption>Browser traffic goes Pages &#8594; Fly &#8594; Neon. Ingest jobs also use R2 so the raw archive survives outside local disk.</figcaption>
+</figure>
+<figure class="code"><pre><code># infra/terraform/main.tf
+module "neon" {
+    source = "./modules/neon"
+}
+
+module "backend_fly" {
+    source       = "./modules/backend_fly"
+    database_url = module.neon.database_url
+}
+
+module "frontend_pages" {
+    source  = "./modules/frontend_pages"
+    api_url = module.backend_fly.backend_url
+}</code></pre><figcaption>The root module keeps the edges explicit: Neon connection string into Fly, Fly public URL into the Pages build.</figcaption></figure>
+</div></section>
+
+<section class="slide section-divider" id="next-divider" data-group="Next"><div class="slide-inner"><p class="eyebrow">PART 9</p><h2 class="divider-title">What's next</h2><p class="divider-dek">Where the work goes next, now that space and time are both covered.</p></div></section>
+<section class="slide" id="next-steps" data-group="Next"><div class="slide-inner"><p class="eyebrow">Next</p><h2>What's next</h2><p>Space and time are already combined: the inverse-distance kNN gives the normal at a point, and the damped step adds recency. The bottom-right corner is filled by composition, so the next work is operational freshness, lightning, and denser cloud inputs.</p>
+<figure>
+<svg viewBox="0 0 880 440">
+<!-- axis labels -->
+<text x="290" y="32" text-anchor="middle" font-size="15" font-weight="700" fill="#1f2937">TIME</text>
+<text x="120" y="60" text-anchor="middle" font-size="12" fill="#6b7280">normal / how it usually is</text>
+<text x="460" y="60" text-anchor="middle" font-size="12" fill="#6b7280">now / recency</text>
+<text x="36" y="250" text-anchor="middle" font-size="15" font-weight="700" fill="#1f2937" transform="rotate(-90 36 250)">SPACE</text>
+<text x="70" y="135" text-anchor="middle" font-size="12" fill="#6b7280" transform="rotate(-90 70 135)">at a station</text>
+<text x="70" y="330" text-anchor="middle" font-size="12" fill="#6b7280" transform="rotate(-90 70 330)">at any point</text>
+
+<!-- top-left: normals (done) -->
+<rect x="100" y="80" width="280" height="150" rx="8" fill="#dcfce7" stroke="#22c55e" stroke-width="2"/>
+<text x="240" y="145" text-anchor="middle" font-size="17" font-weight="700" fill="#166534">Normals</text>
+<text x="240" y="170" text-anchor="middle" font-size="12" fill="#15803d">done</text>
+
+<!-- top-right: damped persistence (done) -->
+<rect x="380" y="80" width="280" height="150" rx="8" fill="#dcfce7" stroke="#22c55e" stroke-width="2"/>
+<text x="520" y="145" text-anchor="middle" font-size="17" font-weight="700" fill="#166534">Damped persistence</text>
+<text x="520" y="170" text-anchor="middle" font-size="12" fill="#15803d">done</text>
+
+<!-- bottom-left: kNN spatial (done) -->
+<rect x="100" y="230" width="280" height="150" rx="8" fill="#dcfce7" stroke="#22c55e" stroke-width="2"/>
+<text x="240" y="295" text-anchor="middle" font-size="17" font-weight="700" fill="#166534">kNN spatial</text>
+<text x="240" y="320" text-anchor="middle" font-size="12" fill="#15803d">done</text>
+
+<!-- bottom-right: point + recency (done by composition) -->
+<rect x="380" y="230" width="280" height="150" rx="8" fill="#dcfce7" stroke="#22c55e" stroke-width="2"/>
+<text x="520" y="292" text-anchor="middle" font-size="17" font-weight="700" fill="#166534">Point + recency</text>
+<text x="520" y="316" text-anchor="middle" font-size="12" fill="#15803d">done &#8212; kNN &#215; damped</text>
+
+<!-- side list -->
+<text x="700" y="100" font-size="13" font-weight="700" fill="#1f2937">Real next:</text>
+<text x="700" y="130" font-size="12" fill="#374151">auto-refresh as data lands</text>
+<text x="700" y="148" font-size="12" fill="#6b7280">(every 24&#8201;h, no retraining)</text>
+<text x="700" y="186" font-size="12" fill="#374151">push lightning past climatology</text>
+<text x="700" y="224" font-size="12" fill="#374151">sharper cloud = denser data</text>
+<text x="700" y="242" font-size="12" fill="#6b7280">(satellite / high-res, not a model)</text>
+</svg>
+<figcaption>The 2&#215;2 map of space (rows: at a station vs at any point) against time (columns: the usual normal vs recency now). All four corners are covered &#8212; the bottom-right by composing the kNN spatial normal with the damped recency step, rather than by a separate joint model.</figcaption>
+</figure>
+<p>Three directions are open.</p>
+<ul>
+<li><strong>Keep it current automatically.</strong> Every model here is a cheap recomputation, not a trained artifact &#8212; the normals are averages, &#945; is one autocorrelation, the lightning rate is a count. A scheduled job can rebuild affected rollups, refit &#945;, and regenerate the backtest as new SMHI data lands.</li>
+<li><strong>Push lightning past climatology.</strong> It is the thinnest corner, still normals plus an indicative damped nudge.</li>
+<li><strong>Sharpen the cloud estimate with denser inputs.</strong> kNN&#215;damped is a good fit for sparse station data; materially sharper cloud needs satellite cloud or a high-resolution analysis served directly, not more complexity on the same station set.</li>
+</ul>
+</div></section>
+
+</div>
+<script>
+(function(){
+document.documentElement.classList.add('js');
+var deck=document.querySelector('.deck');
+var slides=Array.prototype.slice.call(deck.querySelectorAll('.slide, .hero'));
+var bar=document.querySelector('.deck-progress');
+var dotsEl=document.querySelector('.deck-dots');
+var dots=slides.map(function(slide,i){
+  var b=document.createElement('button');b.type='button';
+  b.setAttribute('aria-label','Go to slide '+(i+1));
+  var label=slide.getAttribute('data-group')||('Slide '+(i+1));
+  var span=document.createElement('span');span.textContent=label;b.appendChild(span);
+  b.addEventListener('click',function(){slide.scrollIntoView({behavior:'smooth',block:'start'});});
+  dotsEl.appendChild(b);return b;
+});
+
+function onScroll(){var max=deck.scrollHeight-deck.clientHeight;bar.style.width=(max>0?(deck.scrollTop/max)*100:0)+'%';}
+deck.addEventListener('scroll',onScroll,{passive:true});onScroll();
+
+var io=new IntersectionObserver(function(entries){entries.forEach(function(e){var i=slides.indexOf(e.target);if(e.isIntersecting){e.target.classList.add('revealed');if(e.intersectionRatio>=0.4){dots.forEach(function(d){d.classList.remove('active');});if(dots[i])dots[i].classList.add('active');}}});},{root:deck,rootMargin:'0px 0px -30% 0px',threshold:[0.1,0.4]});
+slides.forEach(function(s){io.observe(s);});
+
+window.addEventListener('keydown',function(ev){var cur=dots.findIndex(function(d){return d.classList.contains('active');});if(cur<0)cur=0;if(ev.key==='ArrowDown'||ev.key==='PageDown'){ev.preventDefault();if(slides[cur+1])slides[cur+1].scrollIntoView({behavior:'smooth'});}else if(ev.key==='ArrowUp'||ev.key==='PageUp'){ev.preventDefault();if(slides[cur-1])slides[cur-1].scrollIntoView({behavior:'smooth'});}});
+})();
+</script>
+<style>
+/* Minimal syntax highlighting for the dark code blocks — token colours tuned for
+   the #16191c background. Applied by the script below; self-contained, no deps. */
+figure.code .t-kw{color:#7fb0ee;}
+figure.code .t-str{color:#b6d895;}
+figure.code .t-com{color:#8a9199;font-style:italic;}
+figure.code .t-num{color:#e0a36a;}
+figure.code .t-dec{color:#57c4cc;}
+figure.code .t-def{color:#e8c879;}
+figure.code .t-const{color:#c9a6f2;}
+figure.code .t-builtin{color:#6cc2a8;}
+</style>
+<script>
+// Tiny Python/bash highlighter: tokenize each code block's text and wrap tokens in
+// spans. Operates on textContent so the already-escaped source stays correct.
+(function () {
+  var KW = new Set("def class return if elif else for while in and or not import from as with try except finally raise pass lambda yield global nonlocal assert del is await async break continue".split(" "));
+  var CONST = new Set(["True", "False", "None"]);
+  var BUILTIN = new Set("int float str bool bytes list dict tuple set frozenset datetime".split(" "));
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function span(cls, txt) { return '<span class="' + cls + '">' + esc(txt) + "</span>"; }
+  function highlight(code) {
+    var out = "", i = 0, n = code.length, prev = null;
+    while (i < n) {
+      var c = code[i];
+      if (c === "#") { var j = i; while (j < n && code[j] !== "\n") j++; out += span("t-com", code.slice(i, j)); i = j; prev = null; continue; }
+      if (c === '"' || c === "'") {
+        var triple = code.substr(i, 3) === c + c + c, q = triple ? c + c + c : c, k = i + q.length;
+        while (k < n) { if (!triple && code[k] === "\\") { k += 2; continue; } if (code.substr(k, q.length) === q) { k += q.length; break; } k++; }
+        out += span("t-str", code.slice(i, k)); i = k; prev = null; continue;
+      }
+      if (c === "@" && (i === 0 || code[i - 1] === "\n")) { var d = i + 1; while (d < n && /[A-Za-z0-9_.]/.test(code[d])) d++; out += span("t-dec", code.slice(i, d)); i = d; prev = null; continue; }
+      if (/[0-9]/.test(c) && !(i > 0 && /[A-Za-z_]/.test(code[i - 1]))) { var m = i; while (m < n && /[0-9._xXa-fA-F]/.test(code[m])) m++; out += span("t-num", code.slice(i, m)); i = m; prev = null; continue; }
+      if (/[A-Za-z_]/.test(c)) {
+        var w = i; while (w < n && /[A-Za-z0-9_]/.test(code[w])) w++;
+        var word = code.slice(i, w), cls = null;
+        if (KW.has(word)) cls = "t-kw";
+        else if (CONST.has(word)) cls = "t-const";
+        else if (BUILTIN.has(word)) cls = "t-builtin";
+        else if (prev === "def" || prev === "class") cls = "t-def";
+        out += cls ? span(cls, word) : esc(word);
+        prev = word; i = w; continue;
+      }
+      out += esc(c); if (!/\s/.test(c)) prev = null; i++;
+    }
+    return out;
+  }
+  document.querySelectorAll("figure.code pre code").forEach(function (el) { el.innerHTML = highlight(el.textContent); });
+})();
+</script>
+</body>
+</html>
