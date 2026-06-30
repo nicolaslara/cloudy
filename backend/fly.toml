@@ -25,10 +25,10 @@ primary_region = "arn"  # Stockholm — closest Fly region to the Swedish data/u
 
 [env]
   # The app binds 0.0.0.0:$PORT; keep PORT and the service internal_port in
-  # lockstep. Production turns the docs surface off (the API_DOCS setting in
-  # cloudy/config.py 404s /docs, /redoc, /openapi.json when false).
+  # lockstep. Docs surface is on in production: the API_DOCS setting in
+  # cloudy/config.py serves /docs, /redoc, and /openapi.json when true.
   PORT = "8080"
-  API_DOCS = "false"
+  API_DOCS = "true"
 
 [http_service]
   internal_port = 8080
